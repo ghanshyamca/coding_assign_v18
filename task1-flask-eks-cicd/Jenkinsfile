@@ -8,11 +8,12 @@
 //
 // Required tooling on the agent: docker, aws cli v2, kubectl.
 //
-// Required Jenkins credentials:
-//   - id 'aws-credentials'  : AWS access key/secret (kind: "AWS Credentials")
-//                             OR run the agent on an EC2 node with an IAM role
-//                             that can push to ECR and call eks:*.
-//   - AWS_ACCOUNT_ID is derived at runtime via `aws sts get-caller-identity`.
+// AWS auth: reads two Jenkins credentials (kind: "Secret text") with IDs
+//   AWS_ACCESS_KEY_ID     -> the IAM access key id
+//   AWS_SECRET_ACCESS_KEY -> the IAM secret access key
+// Create them under Manage Jenkins -> Credentials -> System -> Global.
+// The aws CLI and kubectl's aws-eks exec plugin pick these env vars up
+// automatically. AWS_ACCOUNT_ID is derived via `aws sts get-caller-identity`.
 
 pipeline {
   agent any
@@ -25,13 +26,14 @@ pipeline {
     // Short git SHA is resolved in the Checkout stage.
     IMAGE_TAG    = "build-${BUILD_NUMBER}"
 
-    // Bind the 'aws-credentials' entry (kind: AWS Credentials) for every
-    // stage: the aws CLI and kubectl's aws-eks exec plugin read these env
-    // vars. If the agent runs on EC2 with an IAM instance role instead,
-    // delete these three lines.
-    AWS_CREDENTIALS       = credentials('aws-credentials')
-    AWS_ACCESS_KEY_ID     = "${env.AWS_CREDENTIALS_USR}"
-    AWS_SECRET_ACCESS_KEY = "${env.AWS_CREDENTIALS_PSW}"
+    // Monorepo: this task lives in a subdirectory of the repo, so stages that
+    // touch files wrap their steps in dir(TASK_DIR).
+    TASK_DIR     = 'task1-flask-eks-cicd'
+
+    // AWS auth from the Jenkins credentials store (kind: Secret text).
+    // The IDs must match exactly; the pipeline fails at startup if missing.
+    AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
   }
 
   options {
@@ -60,13 +62,15 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh '''
-          docker build \
-            --build-arg APP_VERSION=${IMAGE_TAG} \
-            -t ${IMAGE_URI}:${IMAGE_TAG} \
-            -t ${IMAGE_URI}:latest \
-            .
-        '''
+        dir("${env.TASK_DIR}") {
+          sh '''
+            docker build \
+              --build-arg APP_VERSION=${IMAGE_TAG} \
+              -t ${IMAGE_URI}:${IMAGE_TAG} \
+              -t ${IMAGE_URI}:latest \
+              .
+          '''
+        }
       }
     }
 
@@ -110,19 +114,21 @@ pipeline {
 
     stage('Deploy') {
       steps {
-        sh '''
-          # Ensure namespace and base resources exist (idempotent).
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/serviceaccount.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/deployment.yaml
+        dir("${env.TASK_DIR}") {
+          sh '''
+            # Ensure namespace and base resources exist (idempotent).
+            kubectl apply -f k8s/namespace.yaml
+            kubectl apply -f k8s/serviceaccount.yaml
+            kubectl apply -f k8s/service.yaml
+            kubectl apply -f k8s/deployment.yaml
 
-          # Roll out the freshly-built image and stamp the version env var.
-          kubectl -n ${K8S_NAMESPACE} set image deployment/flask-eks \
-            flask-eks=${IMAGE_URI}:${IMAGE_TAG}
-          kubectl -n ${K8S_NAMESPACE} set env deployment/flask-eks \
-            APP_VERSION=${IMAGE_TAG}
-        '''
+            # Roll out the freshly-built image and stamp the version env var.
+            kubectl -n ${K8S_NAMESPACE} set image deployment/flask-eks \
+              flask-eks=${IMAGE_URI}:${IMAGE_TAG}
+            kubectl -n ${K8S_NAMESPACE} set env deployment/flask-eks \
+              APP_VERSION=${IMAGE_TAG}
+          '''
+        }
       }
     }
 
