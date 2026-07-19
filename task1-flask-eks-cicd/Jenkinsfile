@@ -8,12 +8,13 @@
 //
 // Required tooling on the agent: docker, aws cli v2, kubectl.
 //
-// AWS auth: reads two Jenkins credentials (kind: "Secret text") with IDs
-//   AWS_ACCESS_KEY_ID     -> the IAM access key id
-//   AWS_SECRET_ACCESS_KEY -> the IAM secret access key
-// Create them under Manage Jenkins -> Credentials -> System -> Global.
-// The aws CLI and kubectl's aws-eks exec plugin pick these env vars up
-// automatically. AWS_ACCOUNT_ID is derived via `aws sts get-caller-identity`.
+// AWS auth: one Jenkins credential with id 'aws-credentials'
+// (kind: "AWS Credentials" — Access Key ID + Secret Access Key fields).
+// Create it under Manage Jenkins -> Credentials -> System -> Global.
+// Every stage that calls aws/kubectl wraps its steps in
+// withCredentials([aws(credentialsId: 'aws-credentials')]), which exports
+// AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY inside the block.
+// AWS_ACCOUNT_ID is derived via `aws sts get-caller-identity`.
 
 pipeline {
   agent any
@@ -29,11 +30,6 @@ pipeline {
     // Monorepo: this task lives in a subdirectory of the repo, so stages that
     // touch files wrap their steps in dir(TASK_DIR).
     TASK_DIR     = 'task1-flask-eks-cicd'
-
-    // AWS auth from the Jenkins credentials store (kind: Secret text).
-    // The IDs must match exactly; the pipeline fails at startup if missing.
-    AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
   }
 
   options {
@@ -50,10 +46,12 @@ pipeline {
         script {
           env.GIT_SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
           env.IMAGE_TAG = env.GIT_SHA
-          env.AWS_ACCOUNT_ID = sh(
-            returnStdout: true,
-            script: "aws sts get-caller-identity --query Account --output text"
-          ).trim()
+          withCredentials([aws(credentialsId: 'aws-credentials')]) {
+            env.AWS_ACCOUNT_ID = sh(
+              returnStdout: true,
+              script: "aws sts get-caller-identity --query Account --output text"
+            ).trim()
+          }
           env.ECR_REGISTRY = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
           env.IMAGE_URI    = "${env.ECR_REGISTRY}/${env.ECR_REPO}"
         }
@@ -86,10 +84,12 @@ pipeline {
 
     stage('Login to ECR') {
       steps {
-        sh '''
-          aws ecr get-login-password --region ${AWS_REGION} \
-            | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-        '''
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh '''
+            aws ecr get-login-password --region ${AWS_REGION} \
+              | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+          '''
+        }
       }
     }
 
@@ -104,40 +104,46 @@ pipeline {
 
     stage('Update kubeconfig') {
       steps {
-        sh '''
-          aws eks update-kubeconfig \
-            --region ${AWS_REGION} \
-            --name ${CLUSTER_NAME}
-        '''
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh '''
+            aws eks update-kubeconfig \
+              --region ${AWS_REGION} \
+              --name ${CLUSTER_NAME}
+          '''
+        }
       }
     }
 
     stage('Deploy') {
       steps {
         dir("${env.TASK_DIR}") {
-          sh '''
-            # Ensure namespace and base resources exist (idempotent).
-            kubectl apply -f k8s/namespace.yaml
-            kubectl apply -f k8s/serviceaccount.yaml
-            kubectl apply -f k8s/service.yaml
-            kubectl apply -f k8s/deployment.yaml
+          withCredentials([aws(credentialsId: 'aws-credentials')]) {
+            sh '''
+              # Ensure namespace and base resources exist (idempotent).
+              kubectl apply -f k8s/namespace.yaml
+              kubectl apply -f k8s/serviceaccount.yaml
+              kubectl apply -f k8s/service.yaml
+              kubectl apply -f k8s/deployment.yaml
 
-            # Roll out the freshly-built image and stamp the version env var.
-            kubectl -n ${K8S_NAMESPACE} set image deployment/flask-eks \
-              flask-eks=${IMAGE_URI}:${IMAGE_TAG}
-            kubectl -n ${K8S_NAMESPACE} set env deployment/flask-eks \
-              APP_VERSION=${IMAGE_TAG}
-          '''
+              # Roll out the freshly-built image and stamp the version env var.
+              kubectl -n ${K8S_NAMESPACE} set image deployment/flask-eks \
+                flask-eks=${IMAGE_URI}:${IMAGE_TAG}
+              kubectl -n ${K8S_NAMESPACE} set env deployment/flask-eks \
+                APP_VERSION=${IMAGE_TAG}
+            '''
+          }
         }
       }
     }
 
     stage('Verify rollout') {
       steps {
-        sh '''
-          kubectl -n ${K8S_NAMESPACE} rollout status deployment/flask-eks --timeout=180s
-          kubectl -n ${K8S_NAMESPACE} get pods -l app.kubernetes.io/name=flask-eks
-        '''
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh '''
+            kubectl -n ${K8S_NAMESPACE} rollout status deployment/flask-eks --timeout=180s
+            kubectl -n ${K8S_NAMESPACE} get pods -l app.kubernetes.io/name=flask-eks
+          '''
+        }
       }
     }
   }
