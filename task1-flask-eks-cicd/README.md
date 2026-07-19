@@ -108,6 +108,21 @@ terraform init
 terraform plan
 terraform apply        # ~15-20 min for EKS to come up
 ```
+<img width="1052" height="447" alt="image" src="https://github.com/user-attachments/assets/4fce1b31-6436-4fe6-8456-d45aa70e6567" />
+
+<img width="1570" height="851" alt="image" src="https://github.com/user-attachments/assets/b6d666dd-8ae1-4da3-ac33-c5be31b6783f" />
+
+<img width="1522" height="963" alt="image" src="https://github.com/user-attachments/assets/040c6520-6fe1-4add-abb9-8c067902fede" />
+
+<img width="1828" height="892" alt="image" src="https://github.com/user-attachments/assets/497af045-ab28-4cf9-9553-42cde1fc51eb" />
+
+<img width="1633" height="852" alt="image" src="https://github.com/user-attachments/assets/dab9b963-9e14-4dbd-9cac-d67e478156ef" />
+
+<img width="1836" height="960" alt="image" src="https://github.com/user-attachments/assets/a2e44390-49db-4f00-98e3-33b7818fcbaf" />
+
+
+
+
 
 Capture the outputs:
 
