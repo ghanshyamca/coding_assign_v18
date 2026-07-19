@@ -19,7 +19,7 @@ variable "environment" {
 variable "cluster_version" {
   description = "Kubernetes control-plane version for EKS."
   type        = string
-  default     = "1.29"
+  default     = "1.33"
 }
 
 variable "vpc_cidr" {
@@ -56,6 +56,12 @@ variable "metrics_server_version" {
   description = "Helm chart version for metrics-server."
   type        = string
   default     = "3.12.1"
+}
+
+variable "cluster_autoscaler_image_tag" {
+  description = "Cluster Autoscaler image tag — keep the minor in sync with cluster_version."
+  type        = string
+  default     = "v1.33.0"
 }
 
 variable "cluster_autoscaler_version" {

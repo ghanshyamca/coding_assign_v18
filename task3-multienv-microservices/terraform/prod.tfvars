@@ -4,5 +4,5 @@
 # environments; override here if an env ever needs a different region/version.
 aws_region         = "ap-south-1"
 base_name          = "microsvc"
-kubernetes_version = "1.30"
+kubernetes_version = "1.33"
 services           = ["api-gateway", "orders"]

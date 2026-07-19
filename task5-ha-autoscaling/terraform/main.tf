@@ -3,7 +3,7 @@
 #
 # This configuration provisions:
 #   * A multi-AZ VPC (3 AZs) for high availability
-#   * An EKS 1.29 cluster with IRSA/OIDC enabled
+#   * An EKS 1.33 cluster with IRSA/OIDC enabled
 #   * A managed node group spanning 3 AZs (min 2 / desired 2 / max 6)
 #   * An ECR repository (scan-on-push + lifecycle policy)
 #   * metrics-server (required by HPA) via Helm
@@ -233,6 +233,13 @@ resource "helm_release" "cluster_autoscaler" {
   set {
     name  = "autoDiscovery.clusterName"
     value = module.eks.cluster_name
+  }
+
+  # Pin the CA image to the cluster's Kubernetes minor — the chart's default
+  # image lags behind and CA must match the control-plane minor version.
+  set {
+    name  = "image.tag"
+    value = var.cluster_autoscaler_image_tag
   }
 
   set {

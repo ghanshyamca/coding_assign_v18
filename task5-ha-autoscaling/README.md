@@ -20,7 +20,7 @@ The cluster is spread across **3 Availability Zones** for high availability.
                           |  Service (LB)     |
                           +---------+---------+
                                     |
-        ================ EKS Cluster (v1.29, 3 AZs) ================
+        ================ EKS Cluster (v1.33, 3 AZs) ================
         |                          |                               |
    +----v----------+       +-------v--------+            +---------v-----+
    |  AZ us-east-1a|       | AZ us-east-1b  |            | AZ us-east-1c |

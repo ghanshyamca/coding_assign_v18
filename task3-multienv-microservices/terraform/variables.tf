@@ -13,7 +13,7 @@ variable "base_name" {
 variable "kubernetes_version" {
   description = "EKS control plane Kubernetes version."
   type        = string
-  default     = "1.30"
+  default     = "1.33"
 }
 
 variable "services" {

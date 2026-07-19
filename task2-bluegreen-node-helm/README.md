@@ -100,7 +100,7 @@ aws eks update-kubeconfig --region us-east-1 --name bluegreen-node-eks
 terraform output ecr_url
 ```
 
-This creates a VPC, an EKS 1.29 cluster with a `t3.medium` managed node group
+This creates a VPC, an EKS 1.33 cluster with a `t3.medium` managed node group
 (min 2 / desired 2 / max 4), IRSA/OIDC, an ECR repo (scan-on-push, keep last 10),
 and installs `metrics-server` via a `helm_release` to demonstrate Helm setup.
 (An `ingress-nginx` / AWS Load Balancer Controller block is included commented.)
