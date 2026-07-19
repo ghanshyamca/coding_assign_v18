@@ -122,6 +122,8 @@ terraform apply        # ~15-20 min for EKS to come up
 
 <img width="1852" height="932" alt="image" src="https://github.com/user-attachments/assets/6b768add-d99e-4701-b218-ee5d348ac5a1" />
 
+<img width="1920" height="2086" alt="image" src="https://github.com/user-attachments/assets/51143ee3-62e9-4e6a-88ad-a21819dde3c1" />
+
 
 Capture the outputs:
 
@@ -137,6 +139,7 @@ terraform output -raw configure_kubectl
 aws eks update-kubeconfig --region us-east-1 --name flask-eks
 kubectl get nodes
 ```
+<img width="993" height="237" alt="image" src="https://github.com/user-attachments/assets/7596f2c5-c17b-4f5c-8303-a8a2d830ae3d" />
 
 ### 3. Build and push the image (manual first push)
 
