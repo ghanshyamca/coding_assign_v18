@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: microsvc-staging
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+patches:
+  - path: replicas-patch.yaml
+  - path: resources-patch.yaml
+
+# Same immutable sha promoted from dev is injected here by the pipeline:
+#   kustomize edit set image microsvc/api-gateway=<ECR_URL>:<GIT_SHA>
+images:
+  - name: microsvc/api-gateway
+    newName: microsvc/api-gateway
+    newTag: staging
+  - name: microsvc/orders
+    newName: microsvc/orders
+    newTag: staging

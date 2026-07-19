@@ -1,0 +1,46 @@
+{{- if .Values.previewService.enabled }}
+# Per-color preview Service — targets ONLY this color's pods (name + track).
+# Used by Jenkins to smoke-test the idle color before cutover.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bluegreen-node.fullname" . }}
+  labels:
+    {{- include "bluegreen-node.labels" . | nindent 4 }}
+    track: {{ .Values.track }}
+spec:
+  type: {{ .Values.previewService.type }}
+  selector:
+    {{- include "bluegreen-node.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.previewService.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}
+---
+{{- if .Values.productionService.enabled }}
+# Stable production Service — the single entrypoint for live traffic.
+# selector.track is flipped between blue and green to perform the cutover.
+# NOTE: selector intentionally omits app.kubernetes.io/instance so it can point
+# at whichever colored release (app-blue OR app-green) is currently active.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bluegreen-node.productionServiceName" . }}
+  labels:
+    {{- include "bluegreen-node.labels" . | nindent 4 }}
+    role: production
+  annotations:
+    bluegreen.node/active-track: {{ .Values.productionService.activeTrack | quote }}
+spec:
+  type: {{ .Values.productionService.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "bluegreen-node.name" . }}
+    track: {{ .Values.productionService.activeTrack }}
+  ports:
+    - name: http
+      port: {{ .Values.productionService.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

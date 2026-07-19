@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-eks
+  namespace: flask-eks
+  labels:
+    app.kubernetes.io/name: flask-eks
+    app.kubernetes.io/part-of: flask-eks
+spec:
+  # ClusterIP keeps the service internal. Expose it via the Ingress (ALB) in
+  # ingress.yaml, or switch type to LoadBalancer for a quick public NLB/ELB.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flask-eks
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

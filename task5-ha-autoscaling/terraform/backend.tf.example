@@ -1,0 +1,19 @@
+# Remote state backend (example).
+#
+# Copy this file to backend.tf and fill in your own bucket / table names, then
+# run `terraform init` to migrate state. Using remote state with locking is
+# strongly recommended for team / CI use.
+#
+# Pre-reqs (create once, out of band):
+#   * An S3 bucket with versioning enabled
+#   * A DynamoDB table with a primary key named "LockID"
+#
+# terraform {
+#   backend "s3" {
+#     bucket         = "ha-app-terraform-state"
+#     key            = "task5-ha-autoscaling/terraform.tfstate"
+#     region         = "us-east-1"
+#     dynamodb_table = "ha-app-terraform-locks"
+#     encrypt        = true
+#   }
+# }

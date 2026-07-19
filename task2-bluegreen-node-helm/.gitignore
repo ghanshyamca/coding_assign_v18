@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+coverage/
+.env
+.env.*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+backend.tf
+
+# OS / editor
+.DS_Store
+*.swp

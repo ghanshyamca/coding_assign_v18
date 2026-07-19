@@ -1,0 +1,151 @@
+// Declarative Jenkins pipeline: build, test, push to ECR, deploy to EKS.
+//
+// Required Jenkins plugins:
+//   - Pipeline / Pipeline: Declarative
+//   - Docker Pipeline (docker CLI available on the agent)
+//   - AWS Credentials  (or an IAM instance profile on the agent)
+//   - Git
+//
+// Required tooling on the agent: docker, aws cli v2, kubectl.
+//
+// Required Jenkins credentials:
+//   - id 'aws-credentials'  : AWS access key/secret (kind: "AWS Credentials")
+//                             OR run the agent on an EC2 node with an IAM role
+//                             that can push to ECR and call eks:*.
+//   - AWS_ACCOUNT_ID is derived at runtime via `aws sts get-caller-identity`.
+
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION   = 'us-east-1'
+    ECR_REPO     = 'flask-eks'
+    CLUSTER_NAME = 'flask-eks'
+    K8S_NAMESPACE = 'flask-eks'
+    // Short git SHA is resolved in the Checkout stage.
+    IMAGE_TAG    = "build-${BUILD_NUMBER}"
+
+    // Bind the 'aws-credentials' entry (kind: AWS Credentials) for every
+    // stage: the aws CLI and kubectl's aws-eks exec plugin read these env
+    // vars. If the agent runs on EC2 with an IAM instance role instead,
+    // delete these three lines.
+    AWS_CREDENTIALS       = credentials('aws-credentials')
+    AWS_ACCESS_KEY_ID     = "${env.AWS_CREDENTIALS_USR}"
+    AWS_SECRET_ACCESS_KEY = "${env.AWS_CREDENTIALS_PSW}"
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+        script {
+          env.GIT_SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+          env.IMAGE_TAG = env.GIT_SHA
+          env.AWS_ACCOUNT_ID = sh(
+            returnStdout: true,
+            script: "aws sts get-caller-identity --query Account --output text"
+          ).trim()
+          env.ECR_REGISTRY = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
+          env.IMAGE_URI    = "${env.ECR_REGISTRY}/${env.ECR_REPO}"
+        }
+      }
+    }
+
+    stage('Build') {
+      steps {
+        sh '''
+          docker build \
+            --build-arg APP_VERSION=${IMAGE_TAG} \
+            -t ${IMAGE_URI}:${IMAGE_TAG} \
+            -t ${IMAGE_URI}:latest \
+            .
+        '''
+      }
+    }
+
+    stage('Test') {
+      steps {
+        // Run the pytest suite inside a throwaway container built from the image.
+        sh '''
+          docker run --rm --entrypoint sh ${IMAGE_URI}:${IMAGE_TAG} -c \
+            "pip install --no-cache-dir pytest==8.2.2 && cd /app && python -m pytest -v"
+        '''
+      }
+    }
+
+    stage('Login to ECR') {
+      steps {
+        sh '''
+          aws ecr get-login-password --region ${AWS_REGION} \
+            | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+        '''
+      }
+    }
+
+    stage('Push') {
+      steps {
+        sh '''
+          docker push ${IMAGE_URI}:${IMAGE_TAG}
+          docker push ${IMAGE_URI}:latest
+        '''
+      }
+    }
+
+    stage('Update kubeconfig') {
+      steps {
+        sh '''
+          aws eks update-kubeconfig \
+            --region ${AWS_REGION} \
+            --name ${CLUSTER_NAME}
+        '''
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh '''
+          # Ensure namespace and base resources exist (idempotent).
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/serviceaccount.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/deployment.yaml
+
+          # Roll out the freshly-built image and stamp the version env var.
+          kubectl -n ${K8S_NAMESPACE} set image deployment/flask-eks \
+            flask-eks=${IMAGE_URI}:${IMAGE_TAG}
+          kubectl -n ${K8S_NAMESPACE} set env deployment/flask-eks \
+            APP_VERSION=${IMAGE_TAG}
+        '''
+      }
+    }
+
+    stage('Verify rollout') {
+      steps {
+        sh '''
+          kubectl -n ${K8S_NAMESPACE} rollout status deployment/flask-eks --timeout=180s
+          kubectl -n ${K8S_NAMESPACE} get pods -l app.kubernetes.io/name=flask-eks
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      // Clean up local images to keep the agent disk lean.
+      sh 'docker image rm ${IMAGE_URI}:${IMAGE_TAG} ${IMAGE_URI}:latest || true'
+    }
+    success {
+      echo "Deployed ${IMAGE_URI}:${IMAGE_TAG} to cluster ${CLUSTER_NAME}."
+    }
+    failure {
+      echo "Pipeline failed. Check the stage logs above."
+    }
+  }
+}

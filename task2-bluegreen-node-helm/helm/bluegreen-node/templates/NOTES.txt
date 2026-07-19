@@ -1,0 +1,23 @@
+{{- if .Values.deployment.enabled }}
+Release {{ .Release.Name }} deployed color "{{ .Values.color }}" (track={{ .Values.track }}).
+
+Smoke-test this color directly via its preview Service:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "bluegreen-node.fullname" . }} 8080:{{ .Values.previewService.port }}
+  curl -s localhost:8080/          # -> {"color":"{{ .Values.color }}","version":"{{ .Values.image.tag }}"}
+  curl -s localhost:8080/health    # -> {"status":"ok",...}
+{{- end }}
+
+{{- if .Values.productionService.enabled }}
+Production router installed. Live traffic currently points at track "{{ .Values.productionService.activeTrack }}".
+
+Production Service : {{ include "bluegreen-node.productionServiceName" . }}
+Cut over with:
+
+  helm upgrade --install {{ .Release.Name }} <chart> \
+    -f values-router.yaml --set productionService.activeTrack=<blue|green>
+
+Roll back the cutover with:
+
+  helm rollback {{ .Release.Name }}
+{{- end }}

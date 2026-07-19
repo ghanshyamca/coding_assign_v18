@@ -1,0 +1,227 @@
+// =============================================================================
+// Jenkinsfile — Blue-Green deployment of bluegreen-node to EKS via Helm.
+//
+// Flow: build & test -> push image to ECR -> deploy the IDLE color ->
+//       smoke test idle -> manual approval -> cut over production Service ->
+//       verify. Rollback = flip the router back (see README).
+//
+// Required Jenkins credentials / config:
+//   * aws-creds        (AWS Username+Password OR use an IAM instance role on
+//                       the Jenkins agent) — needs ECR push + eks:DescribeCluster.
+//   * Jenkins agent must have: docker, awscli v2, kubectl, helm, node 20, jq.
+//   * The agent's IAM principal must be mapped in the EKS aws-auth / access
+//     entries with permission to deploy (see terraform enable_cluster_creator).
+// =============================================================================
+
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'AWS_REGION',   defaultValue: 'us-east-1',           description: 'AWS region')
+    string(name: 'CLUSTER_NAME', defaultValue: 'bluegreen-node-eks',  description: 'EKS cluster name')
+    string(name: 'ECR_REPO',     defaultValue: 'bluegreen-node',      description: 'ECR repository name')
+    string(name: 'NAMESPACE',    defaultValue: 'default',             description: 'Kubernetes namespace')
+    string(name: 'CHART_PATH',   defaultValue: 'helm/bluegreen-node', description: 'Path to the Helm chart')
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  environment {
+    APP_NAME     = 'bluegreen-node'
+    GIT_SHA      = "${env.GIT_COMMIT ?: 'latest'}"
+    // Populated in the Determine Idle Color stage.
+    LIVE_COLOR   = ''
+    IDLE_COLOR   = ''
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+        script {
+          env.GIT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          echo "Building git sha ${env.GIT_SHA}"
+        }
+      }
+    }
+
+    stage('Build & Test') {
+      steps {
+        dir('app') {
+          sh 'npm ci'
+          sh 'npm test'
+        }
+      }
+    }
+
+    stage('Docker Build & Push to ECR') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          script {
+            env.ACCOUNT_ID = sh(script: 'aws sts get-caller-identity --query Account --output text', returnStdout: true).trim()
+            env.ECR_URL    = "${env.ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com/${params.ECR_REPO}"
+          }
+          sh '''
+            set -euo pipefail
+            aws ecr get-login-password --region ${AWS_REGION} \
+              | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+            docker build -t ${ECR_URL}:${GIT_SHA} -t ${ECR_URL}:latest ./app
+            docker push ${ECR_URL}:${GIT_SHA}
+            docker push ${ECR_URL}:latest
+          '''
+        }
+      }
+    }
+
+    stage('Configure kubectl') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh 'aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}'
+        }
+      }
+    }
+
+    stage('Determine Idle Color') {
+      steps {
+        // kubectl talks to EKS through the aws-eks exec plugin, so AWS
+        // credentials must be bound here too (same as the helm stages).
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          script {
+            // Read the current live track from the production Service selector.
+            // Empty on a first-ever deploy (Service doesn't exist yet).
+            def live = sh(
+              script: """
+                kubectl -n ${params.NAMESPACE} get svc ${APP_NAME}-active \
+                  -o jsonpath='{.spec.selector.track}' 2>/dev/null || true
+              """,
+              returnStdout: true
+            ).trim()
+
+            if (!live) {
+              // Bootstrap: nothing is live yet. Deploy blue and cut over to it
+              // immediately after the smoke test — there is no previous color
+              // to keep warm.
+              env.BOOTSTRAP   = 'true'
+              env.LIVE_COLOR  = 'blue'   // what the router will point at post-cutover
+              env.IDLE_COLOR  = 'blue'
+              echo 'First deploy detected: bootstrapping with blue as the initial live color.'
+            } else {
+              env.BOOTSTRAP  = 'false'
+              env.LIVE_COLOR = (live == 'green') ? 'green' : 'blue'
+              env.IDLE_COLOR = (env.LIVE_COLOR == 'blue') ? 'green' : 'blue'
+              echo "Live color = ${env.LIVE_COLOR} | Deploying to idle color = ${env.IDLE_COLOR}"
+            }
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Idle Color') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            set -euo pipefail
+            helm upgrade --install app-${IDLE_COLOR} ${CHART_PATH} \
+              --namespace ${NAMESPACE} --create-namespace \
+              -f ${CHART_PATH}/values-${IDLE_COLOR}.yaml \
+              --set image.repository=${ECR_URL} \
+              --set image.tag=${GIT_SHA} \
+              --wait --timeout 5m
+
+            # Ensure the router release exists (owns the production Service).
+            helm upgrade --install app-router ${CHART_PATH} \
+              --namespace ${NAMESPACE} \
+              -f ${CHART_PATH}/values-router.yaml \
+              --set productionService.activeTrack=${LIVE_COLOR} \
+              --wait --timeout 2m
+          '''
+        }
+      }
+    }
+
+    stage('Smoke Test Idle Color') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            set -euo pipefail
+            # Hit the idle color's preview Service from an ephemeral pod.
+            kubectl -n ${NAMESPACE} rollout status deploy/${APP_NAME}-${IDLE_COLOR} --timeout=120s
+            kubectl -n ${NAMESPACE} run smoke-${BUILD_NUMBER} --rm -i --restart=Never \
+              --image=curlimages/curl:8.8.0 -- \
+              curl -sf http://${APP_NAME}-${IDLE_COLOR}.${NAMESPACE}.svc.cluster.local/health
+          '''
+        }
+      }
+    }
+
+    stage('Approve Cutover') {
+      steps {
+        input message: "Cut production traffic over to ${env.IDLE_COLOR} (sha ${env.GIT_SHA})?", ok: 'Cut over'
+      }
+    }
+
+    stage('Cut Over') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          // Canonical cutover: helm upgrade the router so Helm stays the source
+          // of truth (enables `helm rollback app-router`).
+          sh '''
+            set -euo pipefail
+            helm upgrade --install app-router ${CHART_PATH} \
+              --namespace ${NAMESPACE} \
+              -f ${CHART_PATH}/values-router.yaml \
+              --set productionService.activeTrack=${IDLE_COLOR} \
+              --wait --timeout 2m
+          '''
+          // Alternative (imperative) cutover — faster but drifts from Helm:
+          //   kubectl -n ${NAMESPACE} patch svc ${APP_NAME}-active \
+          //     -p '{"spec":{"selector":{"app.kubernetes.io/name":"'${APP_NAME}'","track":"'${IDLE_COLOR}'"}}}'
+        }
+      }
+    }
+
+    stage('Verify') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            set -euo pipefail
+            ACTIVE=$(kubectl -n ${NAMESPACE} get svc ${APP_NAME}-active -o jsonpath='{.spec.selector.track}')
+            echo "Production Service now points at: ${ACTIVE}"
+            test "${ACTIVE}" = "${IDLE_COLOR}"
+            kubectl -n ${NAMESPACE} run verify-${BUILD_NUMBER} --rm -i --restart=Never \
+              --image=curlimages/curl:8.8.0 -- \
+              curl -sf http://${APP_NAME}-active.${NAMESPACE}.svc.cluster.local/
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      script {
+        if (env.BOOTSTRAP == 'true') {
+          echo "Bootstrapped first deploy: ${env.GIT_SHA} is live on blue. Deploy again to populate green for blue-green rotation."
+        } else {
+          echo "Deployed ${env.GIT_SHA} to ${env.IDLE_COLOR} and cut over. Previous live color ${env.LIVE_COLOR} kept warm for rollback."
+        }
+      }
+    }
+    failure {
+      echo "Pipeline failed. Production Service was NOT changed unless the Cut Over stage completed. To roll back a completed cutover run: helm rollback app-router"
+    }
+    always {
+      script {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh 'kubectl -n ${NAMESPACE} get svc,deploy -l app.kubernetes.io/name=${APP_NAME} || true'
+        }
+      }
+      cleanWs()
+    }
+  }
+}

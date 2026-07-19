@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flask-eks
+  labels:
+    app.kubernetes.io/name: flask-eks
+    app.kubernetes.io/part-of: flask-eks

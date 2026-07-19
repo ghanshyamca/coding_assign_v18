@@ -1,0 +1,12 @@
+apiVersion: v2
+name: bluegreen-node
+description: Blue-green deployable Node.js (Express) app for EKS
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - bluegreen
+  - nodejs
+  - eks
+maintainers:
+  - name: platform-team

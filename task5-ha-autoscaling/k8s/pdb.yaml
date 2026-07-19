@@ -1,0 +1,16 @@
+# PodDisruptionBudget: keeps at least one replica alive through *voluntary*
+# disruptions — node drains during Cluster Autoscaler scale-in, managed node
+# group rolling upgrades, `kubectl drain`, etc. Without this, a drain could
+# evict every replica at once despite the multi-AZ topology spread.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ha-app
+  namespace: ha-app
+  labels:
+    app.kubernetes.io/name: ha-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ha-app

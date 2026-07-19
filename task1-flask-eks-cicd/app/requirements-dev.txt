@@ -1,0 +1,4 @@
+# Test/dev-only dependencies — installed by the CI Test stage,
+# never shipped in the runtime image.
+-r requirements.txt
+pytest==8.2.2

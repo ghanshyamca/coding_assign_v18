@@ -1,0 +1,30 @@
+# Optional: expose the service publicly via an AWS Application Load Balancer.
+# Requires the AWS Load Balancer Controller to be installed in the cluster:
+#   https://kubernetes-sigs.github.io/aws-load-balancer-controller/
+#
+# Apply with `kubectl apply -f ingress.yaml` once the controller is running.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flask-eks
+  namespace: flask-eks
+  labels:
+    app.kubernetes.io/name: flask-eks
+    app.kubernetes.io/part-of: flask-eks
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flask-eks
+                port:
+                  number: 80

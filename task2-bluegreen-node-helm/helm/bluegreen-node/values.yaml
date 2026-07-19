@@ -1,0 +1,96 @@
+###############################################################################
+# Default values for bluegreen-node.
+#
+# Blue-green model:
+#   * Each color is installed as its own release (app-blue, app-green) with
+#     deployment.enabled=true and a per-color "preview" Service used to smoke
+#     test that color directly.
+#   * ONE stable "production" Service (<appName>-active) selects pods by the
+#     `track` label. Cutover = point productionService.activeTrack at the idle
+#     color. It is owned by a dedicated router release (values-router.yaml)
+#     so it is never destroyed when a color release is upgraded.
+###############################################################################
+
+# Base application name — drives the stable production Service name.
+appName: bluegreen-node
+
+# Color/track for THIS release. Overridden per color in values-blue/green.yaml.
+color: blue
+track: blue
+
+# Suffix appended to the release fullname (e.g. "blue" -> app-...-blue).
+nameSuffix: ""
+
+image:
+  repository: REPLACE_WITH_ECR_URL/bluegreen-node
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+# The colored Deployment (set enabled=false for the router-only release).
+deployment:
+  enabled: true
+
+# Per-color preview Service (ClusterIP) for smoke-testing a single color.
+previewService:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# Stable production Service whose selector.track is flipped on cutover.
+# Enabled only in the router release.
+productionService:
+  enabled: false
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  activeTrack: blue
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+# Pod / container security hardening (non-root).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Probes hit the app's /health endpoint.
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

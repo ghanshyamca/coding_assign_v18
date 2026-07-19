@@ -1,0 +1,21 @@
+###############################################################################
+# values-blue.yaml — the BLUE color release (app-blue).
+# Install:  helm upgrade --install app-blue ./helm/bluegreen-node \
+#              -f ./helm/bluegreen-node/values-blue.yaml \
+#              --set image.repository=<ECR_URL>/bluegreen-node \
+#              --set image.tag=<GIT_SHA>
+###############################################################################
+
+color: blue
+track: blue
+nameSuffix: blue
+
+deployment:
+  enabled: true
+
+previewService:
+  enabled: true
+
+# The blue color release does NOT own the production Service.
+productionService:
+  enabled: false

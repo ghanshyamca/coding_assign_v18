@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fullstack-frontend
+  namespace: fullstack
+  labels:
+    app: fullstack-frontend
+spec:
+  # ClusterIP by default; the ingress.yaml exposes it via an AWS ALB.
+  # Switch to type: LoadBalancer for a quick NLB-backed external endpoint.
+  type: ClusterIP
+  selector:
+    app: fullstack-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP

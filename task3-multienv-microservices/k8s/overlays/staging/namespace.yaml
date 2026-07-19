@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: microsvc-staging
+  labels:
+    environment: staging
+    part-of: microsvc

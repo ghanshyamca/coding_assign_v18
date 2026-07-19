@@ -1,0 +1,26 @@
+###############################################################################
+# values-router.yaml — the ROUTER release (app-router).
+#
+# Owns the single stable production Service (<appName>-active). It renders NO
+# Deployment and NO preview Service. Cutover = change activeTrack and run:
+#   helm upgrade --install app-router ./helm/bluegreen-node \
+#     -f ./helm/bluegreen-node/values-router.yaml \
+#     --set productionService.activeTrack=green
+###############################################################################
+
+deployment:
+  enabled: false
+
+previewService:
+  enabled: false
+
+serviceAccount:
+  create: false
+
+productionService:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  # The color currently receiving production traffic. Flip to cut over.
+  activeTrack: blue

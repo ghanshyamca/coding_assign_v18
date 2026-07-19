@@ -1,0 +1,215 @@
+// =============================================================================
+// Multi-environment CI/CD pipeline for the "microsvc" microservices app.
+//
+// Promotion strategy:
+//   - Images are built ONCE and tagged with the immutable git commit sha.
+//   - The SAME sha is promoted dev -> staging -> prod. No image is ever
+//     rebuilt for a downstream environment, which guarantees that what was
+//     tested in dev is bit-for-bit what reaches prod.
+//   - Each promotion into staging and prod is gated by a manual approval.
+//   - Each environment maps to a Terraform WORKSPACE and a kustomize overlay.
+//
+// Credentials (configure in Jenkins > Credentials):
+//   - 'aws-creds'  : AWS access key/secret (or use an IAM instance role and
+//                    delete the withCredentials wrapper).
+//   Agents are expected to have: docker, aws cli v2, kubectl, kustomize,
+//   terraform (>=1.5), and node 20 available on PATH.
+// =============================================================================
+
+pipeline {
+  agent any
+
+  parameters {
+    booleanParam(
+      name: 'PROMOTE_TO_STAGING',
+      defaultValue: false,
+      description: 'After dev, request promotion to staging (still gated by manual approval).'
+    )
+    booleanParam(
+      name: 'PROMOTE_TO_PROD',
+      defaultValue: false,
+      description: 'After staging, request promotion to prod (still gated by manual approval).'
+    )
+  }
+
+  environment {
+    AWS_REGION   = 'ap-south-1'
+    AWS_ACCOUNT  = '000000000000'                 // <-- replace with your account id
+    REGISTRY     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    BASE_NAME    = 'microsvc'
+    // Immutable tag shared by every environment for this build.
+    // Resolved in the Checkout stage (GIT_COMMIT is not reliably populated
+    // before `checkout scm` runs, e.g. for inline pipeline scripts).
+    GATEWAY_REPO = "${BASE_NAME}/api-gateway"
+    ORDERS_REPO  = "${BASE_NAME}/orders"
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+        script {
+          // Resolve the canonical immutable tag AFTER checkout so it works for
+          // both Pipeline-from-SCM and inline pipeline scripts.
+          def sha = env.GIT_COMMIT ?: sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+          env.IMAGE_TAG = sha
+          // Short sha is nicer in logs; full sha stays the canonical tag.
+          env.SHORT_SHA = sha.take(12)
+          echo "Building immutable tag: ${env.IMAGE_TAG}"
+        }
+      }
+    }
+
+    stage('Build & Test services') {
+      parallel {
+        stage('api-gateway') {
+          steps {
+            dir('services/api-gateway') {
+              sh 'npm install --no-audit --no-fund'
+              sh 'npm test'
+            }
+          }
+        }
+        stage('orders') {
+          steps {
+            dir('services/orders') {
+              sh 'npm install --no-audit --no-fund'
+              sh 'npm test'
+            }
+          }
+        }
+      }
+    }
+
+    stage('Build & Push images to ECR') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'aws-creds',
+          usernameVariable: 'AWS_ACCESS_KEY_ID',
+          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+          sh '''
+            set -euo pipefail
+            aws ecr get-login-password --region "${AWS_REGION}" \
+              | docker login --username AWS --password-stdin "${REGISTRY}"
+
+            # Build once, tag with the immutable git sha.
+            docker build -t "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}" services/api-gateway
+            docker build -t "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"  services/orders
+
+            docker push "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}"
+            docker push "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to DEV') {
+      steps {
+        deployEnv('dev')
+      }
+    }
+
+    stage('Integration test (dev)') {
+      steps {
+        sh '''
+          set -euo pipefail
+          kubectl -n microsvc-dev rollout status deploy/api-gateway --timeout=180s
+          kubectl -n microsvc-dev rollout status deploy/orders --timeout=180s
+          # Smoke test the gateway health endpoint from inside the cluster.
+          kubectl -n microsvc-dev run smoke-$BUILD_NUMBER --rm -i --restart=Never \
+            --image=curlimages/curl:8.8.0 -- \
+            curl -fsS http://api-gateway:3000/health
+        '''
+      }
+    }
+
+    stage('Approve promotion to STAGING') {
+      when { expression { return params.PROMOTE_TO_STAGING } }
+      steps {
+        timeout(time: 1, unit: 'HOURS') {
+          input message: "Promote sha ${env.SHORT_SHA} from DEV to STAGING?", ok: 'Promote'
+        }
+      }
+    }
+
+    stage('Deploy to STAGING') {
+      when { expression { return params.PROMOTE_TO_STAGING } }
+      steps {
+        // Same immutable IMAGE_TAG — no rebuild.
+        deployEnv('staging')
+        sh 'kubectl -n microsvc-staging rollout status deploy/api-gateway --timeout=180s'
+      }
+    }
+
+    stage('Approve promotion to PROD') {
+      when { expression { return params.PROMOTE_TO_STAGING && params.PROMOTE_TO_PROD } }
+      steps {
+        timeout(time: 2, unit: 'HOURS') {
+          input message: "Promote sha ${env.SHORT_SHA} from STAGING to PROD?", ok: 'Ship it'
+        }
+      }
+    }
+
+    stage('Deploy to PROD') {
+      when { expression { return params.PROMOTE_TO_STAGING && params.PROMOTE_TO_PROD } }
+      steps {
+        // Same immutable IMAGE_TAG — no rebuild.
+        deployEnv('prod')
+        sh 'kubectl -n microsvc-prod rollout status deploy/api-gateway --timeout=300s'
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "Pipeline succeeded for sha ${env.SHORT_SHA}."
+    }
+    failure {
+      echo "Pipeline FAILED for sha ${env.SHORT_SHA}. Check the failing stage above."
+    }
+    always {
+      sh 'docker image prune -f || true'
+      cleanWs()
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// deployEnv(envName)
+//   1. Selects the Terraform workspace for the environment and refreshes the
+//      cluster name / kubeconfig (idempotent; assumes infra already applied).
+//   2. Pins the immutable image sha into the kustomize overlay.
+//   3. Applies the overlay to the environment namespace.
+// -----------------------------------------------------------------------------
+def deployEnv(String envName) {
+  withCredentials([usernamePassword(
+    credentialsId: 'aws-creds',
+    usernameVariable: 'AWS_ACCESS_KEY_ID',
+    passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+    sh """
+      set -euo pipefail
+      cd terraform
+      terraform init -input=false
+      terraform workspace select ${envName} || terraform workspace new ${envName}
+      CLUSTER=\$(terraform output -raw cluster_name)
+      cd ..
+
+      aws eks update-kubeconfig --region "${AWS_REGION}" --name "\${CLUSTER}"
+
+      # Pin the SAME immutable sha into the overlay before applying.
+      cd k8s/overlays/${envName}
+      kustomize edit set image ${BASE_NAME}/api-gateway=${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}
+      kustomize edit set image ${BASE_NAME}/orders=${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}
+      cd ../../..
+
+      kubectl apply -k k8s/overlays/${envName}
+    """
+  }
+}

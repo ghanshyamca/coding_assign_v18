@@ -1,0 +1,32 @@
+##############################################################################
+# Remote state backend (S3 + DynamoDB lock).
+#
+# Copy this file to backend.tf and run `terraform init`.
+#
+# IMPORTANT — workspace-aware state:
+# When you use `workspace_key_prefix`, Terraform stores each workspace's state
+# under:
+#
+#     <workspace_key_prefix>/<workspace_name>/<key>
+#
+# So the effective key for the "dev" workspace becomes:
+#
+#     microsvc/dev/terraform.tfstate
+#
+# giving you fully segregated state per environment from ONE backend block.
+##############################################################################
+
+terraform {
+  backend "s3" {
+    bucket = "REPLACE-ME-microsvc-tfstate"
+
+    # Combined with the workspace name this yields
+    #   microsvc/<workspace>/terraform.tfstate
+    workspace_key_prefix = "microsvc"
+    key                  = "terraform.tfstate"
+
+    region         = "ap-south-1"
+    dynamodb_table = "microsvc-tf-locks"
+    encrypt        = true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "fullstack-backend",
+  "version": "1.0.0",
+  "description": "Node.js Express API for the full-stack EKS assignment.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "jest --forceExit"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "4.19.2"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "supertest": "7.0.0"
+  }
+}

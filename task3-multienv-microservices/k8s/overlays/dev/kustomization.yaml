@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: microsvc-dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+patches:
+  - path: replicas-patch.yaml
+  - path: resources-patch.yaml
+
+# Image names/tags. The registry account + immutable git-sha tag are injected
+# by the pipeline via:
+#   kustomize edit set image microsvc/api-gateway=<ECR_URL>:<GIT_SHA>
+#   kustomize edit set image microsvc/orders=<ECR_URL>:<GIT_SHA>
+# The SAME sha is promoted dev -> staging -> prod (no rebuild per env).
+images:
+  - name: microsvc/api-gateway
+    newName: microsvc/api-gateway
+    newTag: dev
+  - name: microsvc/orders
+    newName: microsvc/orders
+    newTag: dev

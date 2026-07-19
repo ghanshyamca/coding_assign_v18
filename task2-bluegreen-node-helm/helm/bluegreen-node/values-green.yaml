@@ -1,0 +1,21 @@
+###############################################################################
+# values-green.yaml — the GREEN color release (app-green).
+# Install:  helm upgrade --install app-green ./helm/bluegreen-node \
+#              -f ./helm/bluegreen-node/values-green.yaml \
+#              --set image.repository=<ECR_URL>/bluegreen-node \
+#              --set image.tag=<GIT_SHA>
+###############################################################################
+
+color: green
+track: green
+nameSuffix: green
+
+deployment:
+  enabled: true
+
+previewService:
+  enabled: true
+
+# The green color release does NOT own the production Service.
+productionService:
+  enabled: false
