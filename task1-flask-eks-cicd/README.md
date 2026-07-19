@@ -120,12 +120,16 @@ terraform apply        # ~15-20 min for EKS to come up
 
 <img width="1836" height="960" alt="image" src="https://github.com/user-attachments/assets/a2e44390-49db-4f00-98e3-33b7818fcbaf" />
 
+<img width="1852" height="932" alt="image" src="https://github.com/user-attachments/assets/6b768add-d99e-4701-b218-ee5d348ac5a1" />
+
+
 Capture the outputs:
 
 ```bash
 terraform output ecr_repository_url
 terraform output -raw configure_kubectl
 ```
+<img width="920" height="217" alt="image" src="https://github.com/user-attachments/assets/bded6784-659d-4536-900c-7b1e7b2a6f0c" />
 
 ### 2. Configure kubectl
 
