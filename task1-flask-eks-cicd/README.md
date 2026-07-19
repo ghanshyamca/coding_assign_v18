@@ -210,6 +210,12 @@ Jenkins IAM principal must also be mapped into the cluster (Terraform sets
 `enable_cluster_creator_admin_permissions`; add the Jenkins role to
 `aws-auth`/EKS access entries if it differs from the creator).
 
+<img width="1920" height="5434" alt="image" src="https://github.com/user-attachments/assets/b286de28-e51f-4078-ae80-ea8608e8fde0" />
+
+<img width="1496" height="593" alt="image" src="https://github.com/user-attachments/assets/c79c4e75-a125-4a9a-9ab0-ab83a1743690" />
+
+<img width="1920" height="16725" alt="image" src="https://github.com/user-attachments/assets/2b9d7bb5-b8f6-461c-9582-b1e8dda9b922" />
+
 ---
 
 ## How to access the app
@@ -221,6 +227,10 @@ kubectl -n flask-eks port-forward svc/flask-eks 8080:80
 curl http://localhost:8080/
 curl http://localhost:8080/health
 ```
+<img width="971" height="111" alt="image" src="https://github.com/user-attachments/assets/36f232b0-b82f-4fe4-b244-2675cb396958" />
+
+<img width="1126" height="157" alt="image" src="https://github.com/user-attachments/assets/9a1f18ce-a900-44b1-a9d3-cb4e693a8458" />
+
 
 **Public access via ALB ingress (optional):** install the AWS Load Balancer
 Controller, then `kubectl apply -f k8s/ingress.yaml` and use the address from
