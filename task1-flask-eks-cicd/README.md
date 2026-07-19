@@ -266,6 +266,7 @@ kubectl delete namespace flask-eks --ignore-not-found
 cd terraform
 terraform destroy
 ```
+<img width="1342" height="965" alt="image" src="https://github.com/user-attachments/assets/6faec3fe-11c0-4692-a5ae-d57cb1c1a030" />
 
 > Delete any LoadBalancer/ALB before `terraform destroy` so no ENIs block VPC
 > deletion. Confirm the ECR repository and CloudWatch log groups are gone to
