@@ -156,6 +156,12 @@ docker build --build-arg APP_VERSION=v1 -t ${IMAGE}:v1 -t ${IMAGE}:latest .
 docker push ${IMAGE}:v1
 docker push ${IMAGE}:latest
 ```
+<img width="1911" height="907" alt="image" src="https://github.com/user-attachments/assets/78c8ba78-c06d-4b8a-b007-44eb91885dcf" />
+
+<img width="1907" height="441" alt="image" src="https://github.com/user-attachments/assets/e8423c42-934b-46b0-9ce2-0aeb69ca957d" />
+
+<img width="1918" height="778" alt="image" src="https://github.com/user-attachments/assets/33df85d7-65f7-4fe4-8a8b-b0c59ecbd192" />
+
 
 ### 4. Deploy to Kubernetes
 
