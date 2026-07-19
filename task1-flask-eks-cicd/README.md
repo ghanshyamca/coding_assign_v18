@@ -13,7 +13,7 @@ Base name used consistently across Terraform, Jenkins, and Kubernetes:
 
 - **App**: minimal Flask service (`GET /`, `GET /health`) served by gunicorn.
 - **Infra (Terraform)**: VPC (3 AZs, public+private subnets, single NAT), EKS
-  1.29 with a managed node group (t3.medium, 2–4 nodes, IRSA + OIDC), and an
+  1.33 with a managed node group (t3.medium, 2–4 nodes, IRSA + OIDC), and an
   ECR repository (scan-on-push, keep last 10 images).
 - **CI/CD (Jenkins)**: checkout → build → test → push to ECR → deploy to EKS →
   verify rollout.
@@ -87,7 +87,7 @@ task1-flask-eks-cicd/
 |-------------|---------------|---------------------------------|
 | AWS CLI     | v2            | auth, ECR login, EKS kubeconfig |
 | Terraform   | >= 1.5        | provision infrastructure        |
-| kubectl     | >= 1.29       | deploy to the cluster           |
+| kubectl     | >= 1.32       | deploy to the cluster           |
 | Docker      | >= 24         | build/run the image             |
 | Jenkins     | LTS           | run the CI/CD pipeline          |
 
@@ -119,10 +119,6 @@ terraform apply        # ~15-20 min for EKS to come up
 <img width="1633" height="852" alt="image" src="https://github.com/user-attachments/assets/dab9b963-9e14-4dbd-9cac-d67e478156ef" />
 
 <img width="1836" height="960" alt="image" src="https://github.com/user-attachments/assets/a2e44390-49db-4f00-98e3-33b7818fcbaf" />
-
-
-
-
 
 Capture the outputs:
 
