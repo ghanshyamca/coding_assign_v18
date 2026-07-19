@@ -120,12 +120,18 @@ terraform apply        # ~15-20 min for EKS to come up
 
 <img width="1836" height="960" alt="image" src="https://github.com/user-attachments/assets/a2e44390-49db-4f00-98e3-33b7818fcbaf" />
 
+<img width="1852" height="932" alt="image" src="https://github.com/user-attachments/assets/6b768add-d99e-4701-b218-ee5d348ac5a1" />
+
+<img width="1920" height="2086" alt="image" src="https://github.com/user-attachments/assets/51143ee3-62e9-4e6a-88ad-a21819dde3c1" />
+
+
 Capture the outputs:
 
 ```bash
 terraform output ecr_repository_url
 terraform output -raw configure_kubectl
 ```
+<img width="920" height="217" alt="image" src="https://github.com/user-attachments/assets/bded6784-659d-4536-900c-7b1e7b2a6f0c" />
 
 ### 2. Configure kubectl
 
@@ -133,6 +139,7 @@ terraform output -raw configure_kubectl
 aws eks update-kubeconfig --region us-east-1 --name flask-eks
 kubectl get nodes
 ```
+<img width="993" height="237" alt="image" src="https://github.com/user-attachments/assets/7596f2c5-c17b-4f5c-8303-a8a2d830ae3d" />
 
 ### 3. Build and push the image (manual first push)
 
@@ -149,6 +156,12 @@ docker build --build-arg APP_VERSION=v1 -t ${IMAGE}:v1 -t ${IMAGE}:latest .
 docker push ${IMAGE}:v1
 docker push ${IMAGE}:latest
 ```
+<img width="1911" height="907" alt="image" src="https://github.com/user-attachments/assets/78c8ba78-c06d-4b8a-b007-44eb91885dcf" />
+
+<img width="1907" height="441" alt="image" src="https://github.com/user-attachments/assets/e8423c42-934b-46b0-9ce2-0aeb69ca957d" />
+
+<img width="1918" height="778" alt="image" src="https://github.com/user-attachments/assets/33df85d7-65f7-4fe4-8a8b-b0c59ecbd192" />
+
 
 ### 4. Deploy to Kubernetes
 
@@ -164,6 +177,10 @@ sed -e "s#REGISTRY/REPO:TAG#${IMAGE}:v1#" \
 
 kubectl -n flask-eks rollout status deployment/flask-eks
 ```
+<img width="912" height="117" alt="image" src="https://github.com/user-attachments/assets/5b354641-7b90-4920-821a-fb4f2f2acc16" />
+
+<img width="1062" height="327" alt="image" src="https://github.com/user-attachments/assets/0ae19fd5-c8fe-48b1-bb8f-6006eda7164c" />
+
 
 ---
 
