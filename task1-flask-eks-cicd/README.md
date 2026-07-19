@@ -177,6 +177,10 @@ sed -e "s#REGISTRY/REPO:TAG#${IMAGE}:v1#" \
 
 kubectl -n flask-eks rollout status deployment/flask-eks
 ```
+<img width="912" height="117" alt="image" src="https://github.com/user-attachments/assets/5b354641-7b90-4920-821a-fb4f2f2acc16" />
+
+<img width="1062" height="327" alt="image" src="https://github.com/user-attachments/assets/0ae19fd5-c8fe-48b1-bb8f-6006eda7164c" />
+
 
 ---
 
