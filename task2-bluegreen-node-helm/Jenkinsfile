@@ -66,7 +66,7 @@ pipeline {
             env.ACCOUNT_ID = sh(script: 'aws sts get-caller-identity --query Account --output text', returnStdout: true).trim()
             env.ECR_URL    = "${env.ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com/${params.ECR_REPO}"
           }
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             aws ecr get-login-password --region ${AWS_REGION} \
               | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
@@ -124,7 +124,7 @@ pipeline {
     stage('Deploy to Idle Color') {
       steps {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             helm upgrade --install app-${IDLE_COLOR} ${CHART_PATH} \
               --namespace ${NAMESPACE} --create-namespace \
@@ -147,7 +147,7 @@ pipeline {
     stage('Smoke Test Idle Color') {
       steps {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             # Hit the idle color's preview Service from an ephemeral pod.
             kubectl -n ${NAMESPACE} rollout status deploy/${APP_NAME}-${IDLE_COLOR} --timeout=120s
@@ -170,7 +170,7 @@ pipeline {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
           // Canonical cutover: helm upgrade the router so Helm stays the source
           // of truth (enables `helm rollback app-router`).
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             helm upgrade --install app-router ${CHART_PATH} \
               --namespace ${NAMESPACE} \
@@ -188,7 +188,7 @@ pipeline {
     stage('Verify') {
       steps {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             ACTIVE=$(kubectl -n ${NAMESPACE} get svc ${APP_NAME}-active -o jsonpath='{.spec.selector.track}')
             echo "Production Service now points at: ${ACTIVE}"
@@ -218,7 +218,8 @@ pipeline {
     always {
       script {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh 'kubectl -n ${NAMESPACE} get svc,deploy -l app.kubernetes.io/name=${APP_NAME} || true'
+          // Skip if the kubeconfig was never written (early-stage failure).
+          sh '[ -f "$HOME/.kube/config" ] && kubectl -n ${NAMESPACE} get svc,deploy -l app.kubernetes.io/name=${APP_NAME} || true'
         }
       }
       cleanWs()

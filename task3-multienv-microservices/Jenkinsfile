@@ -92,7 +92,7 @@ pipeline {
     stage('Build & Push images to ECR') {
       steps {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             aws ecr get-login-password --region "${AWS_REGION}" \
               | docker login --username AWS --password-stdin "${REGISTRY}"
@@ -117,7 +117,7 @@ pipeline {
     stage('Integration test (dev)') {
       steps {
         withCredentials([aws(credentialsId: 'aws-credentials')]) {
-          sh '''
+          sh '''#!/bin/bash
             set -euo pipefail
             kubectl -n microsvc-dev rollout status deploy/api-gateway --timeout=180s
             kubectl -n microsvc-dev rollout status deploy/orders --timeout=180s
@@ -195,7 +195,7 @@ pipeline {
 def deployEnv(String envName) {
   withCredentials([aws(credentialsId: 'aws-credentials')]) {
     dir('task3-multienv-microservices') {
-      sh """
+      sh """#!/bin/bash
         set -euo pipefail
         cd terraform
         terraform init -input=false
