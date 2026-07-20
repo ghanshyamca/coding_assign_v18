@@ -283,22 +283,15 @@ terraform destroy \
   -var="cluster_name=bluegreen-node-eks"
 ```
 
+<img width="1507" height="237" alt="image" src="https://github.com/user-attachments/assets/15c6049f-93f5-45ea-a745-aca01c9de92e" />
+
+<img width="1918" height="823" alt="image" src="https://github.com/user-attachments/assets/704d2377-bfb4-4b4a-b422-a61ce8f052d7" />
+
+<img width="1821" height="953" alt="image" src="https://github.com/user-attachments/assets/b3d11d23-20fa-4b9c-a040-a0533ae1c54f" />
+
+<img width="1919" height="1016" alt="image" src="https://github.com/user-attachments/assets/cc349216-ad5e-418c-a385-350bd8b4abbe" />
+
 If ECR still holds images, delete them first or Terraform will refuse to remove
 the repository.
 
 ---
-
-## Security practices applied
-
-- **Non-root everywhere**: container runs as the `node` user; pod/container
-  `securityContext` sets `runAsNonRoot`, drops all capabilities, disables
-  privilege escalation, uses a read-only root filesystem and `RuntimeDefault`
-  seccomp.
-- **Least-privilege image**: multi-stage build, `npm ci --omit=dev`, pinned
-  `node:20-alpine`, `HEALTHCHECK` on `/health`.
-- **Supply chain**: ECR `scan_on_push` enabled; images tagged by immutable git SHA.
-- **Resource governance**: CPU/memory requests and limits set on the deployment.
-- **ServiceAccount** token auto-mount disabled (app needs no API access).
-- **IRSA/OIDC** enabled on the cluster for fine-grained pod IAM when needed.
-- Lock down the EKS public endpoint to CI egress CIDRs and use a remote,
-  locked Terraform backend (`backend.tf.example`) in real environments.
