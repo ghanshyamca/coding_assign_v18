@@ -31,11 +31,11 @@ pipeline {
   }
 
   environment {
-    APP_NAME     = 'bluegreen-node'
-    GIT_SHA      = "${env.GIT_COMMIT ?: 'latest'}"
-    // Populated in the Determine Idle Color stage.
-    LIVE_COLOR   = ''
-    IDLE_COLOR   = ''
+    APP_NAME = 'bluegreen-node'
+    // NOTE: GIT_SHA / LIVE_COLOR / IDLE_COLOR are deliberately NOT declared
+    // here. environment{} declarations mask later `env.X = ...` assignments
+    // (and empty-string values unset the variable entirely), which would
+    // discard the values computed in Checkout / Determine Idle Color.
   }
 
   stages {
