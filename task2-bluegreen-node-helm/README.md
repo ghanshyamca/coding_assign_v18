@@ -131,6 +131,11 @@ SHA=$(git rev-parse --short HEAD)
 docker build -t $ECR_URL:$SHA ./app
 docker push $ECR_URL:$SHA
 ```
+<img width="1918" height="856" alt="image" src="https://github.com/user-attachments/assets/4bcde88d-9472-4279-901e-1b1df570b8ff" />
+
+<img width="1195" height="206" alt="image" src="https://github.com/user-attachments/assets/42a5588a-818d-454f-aa23-f3830e17fb0e" />
+
+<img width="1920" height="869" alt="image" src="https://github.com/user-attachments/assets/68df8592-f98c-47f3-a7c2-fc6b52e60002" />
 
 ---
 
@@ -153,6 +158,9 @@ helm upgrade --install app-green $CHART -f $CHART/values-green.yaml \
 helm upgrade --install app-router $CHART -f $CHART/values-router.yaml \
   --set productionService.activeTrack=blue --wait
 ```
+<img width="995" height="742" alt="image" src="https://github.com/user-attachments/assets/2c81054a-226b-4936-a683-245b90149ea6" />
+
+<img width="980" height="366" alt="image" src="https://github.com/user-attachments/assets/525ade15-4e63-46c9-bc9a-b3f405ce15d5" />
 
 Verify each color in isolation via its **preview Service**
 (`bluegreen-node-blue`, `bluegreen-node-green`) before cutting over.
