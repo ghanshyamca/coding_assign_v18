@@ -10,8 +10,9 @@
 //   - Each environment maps to a Terraform WORKSPACE and a kustomize overlay.
 //
 // Credentials (configure in Jenkins > Credentials):
-//   - 'aws-creds'  : AWS access key/secret (or use an IAM instance role and
-//                    delete the withCredentials wrapper).
+//   - 'aws-credentials' : kind "AWS Credentials" (same entry as tasks 1/2;
+//                         or use an IAM instance role and delete the
+//                         withCredentials wrappers).
 //   Agents are expected to have: docker, aws cli v2, kubectl, kustomize,
 //   terraform (>=1.5), and node 20 available on PATH.
 // =============================================================================
@@ -33,8 +34,8 @@ pipeline {
   }
 
   environment {
-    AWS_REGION   = 'ap-south-1'
-    AWS_ACCOUNT  = '000000000000'                 // <-- replace with your account id
+    AWS_REGION   = 'ap-south-1'                   // region the microsvc-* clusters run in
+    AWS_ACCOUNT  = '848504403205'
     REGISTRY     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
     BASE_NAME    = 'microsvc'
     // Immutable tag shared by every environment for this build.
@@ -71,7 +72,7 @@ pipeline {
       parallel {
         stage('api-gateway') {
           steps {
-            dir('services/api-gateway') {
+            dir('task3-multienv-microservices/services/api-gateway') {
               sh 'npm install --no-audit --no-fund'
               sh 'npm test'
             }
@@ -79,7 +80,7 @@ pipeline {
         }
         stage('orders') {
           steps {
-            dir('services/orders') {
+            dir('task3-multienv-microservices/services/orders') {
               sh 'npm install --no-audit --no-fund'
               sh 'npm test'
             }
@@ -90,18 +91,15 @@ pipeline {
 
     stage('Build & Push images to ECR') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'aws-creds',
-          usernameVariable: 'AWS_ACCESS_KEY_ID',
-          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             set -euo pipefail
             aws ecr get-login-password --region "${AWS_REGION}" \
               | docker login --username AWS --password-stdin "${REGISTRY}"
 
             # Build once, tag with the immutable git sha.
-            docker build -t "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}" services/api-gateway
-            docker build -t "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"  services/orders
+            docker build -t "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}" task3-multienv-microservices/services/api-gateway
+            docker build -t "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"  task3-multienv-microservices/services/orders
 
             docker push "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}"
             docker push "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"
@@ -118,15 +116,17 @@ pipeline {
 
     stage('Integration test (dev)') {
       steps {
-        sh '''
-          set -euo pipefail
-          kubectl -n microsvc-dev rollout status deploy/api-gateway --timeout=180s
-          kubectl -n microsvc-dev rollout status deploy/orders --timeout=180s
-          # Smoke test the gateway health endpoint from inside the cluster.
-          kubectl -n microsvc-dev run smoke-$BUILD_NUMBER --rm -i --restart=Never \
-            --image=curlimages/curl:8.8.0 -- \
-            curl -fsS http://api-gateway:3000/health
-        '''
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh '''
+            set -euo pipefail
+            kubectl -n microsvc-dev rollout status deploy/api-gateway --timeout=180s
+            kubectl -n microsvc-dev rollout status deploy/orders --timeout=180s
+            # Smoke test the gateway health endpoint from inside the cluster.
+            kubectl -n microsvc-dev run smoke-$BUILD_NUMBER --rm -i --restart=Never \
+              --image=curlimages/curl:8.8.0 -- \
+              curl -fsS http://api-gateway:3000/health
+          '''
+        }
       }
     }
 
@@ -144,7 +144,9 @@ pipeline {
       steps {
         // Same immutable IMAGE_TAG — no rebuild.
         deployEnv('staging')
-        sh 'kubectl -n microsvc-staging rollout status deploy/api-gateway --timeout=180s'
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh 'kubectl -n microsvc-staging rollout status deploy/api-gateway --timeout=180s'
+        }
       }
     }
 
@@ -162,7 +164,9 @@ pipeline {
       steps {
         // Same immutable IMAGE_TAG — no rebuild.
         deployEnv('prod')
-        sh 'kubectl -n microsvc-prod rollout status deploy/api-gateway --timeout=300s'
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh 'kubectl -n microsvc-prod rollout status deploy/api-gateway --timeout=300s'
+        }
       }
     }
   }
@@ -189,27 +193,26 @@ pipeline {
 //   3. Applies the overlay to the environment namespace.
 // -----------------------------------------------------------------------------
 def deployEnv(String envName) {
-  withCredentials([usernamePassword(
-    credentialsId: 'aws-creds',
-    usernameVariable: 'AWS_ACCESS_KEY_ID',
-    passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-    sh """
-      set -euo pipefail
-      cd terraform
-      terraform init -input=false
-      terraform workspace select ${envName} || terraform workspace new ${envName}
-      CLUSTER=\$(terraform output -raw cluster_name)
-      cd ..
+  withCredentials([aws(credentialsId: 'aws-credentials')]) {
+    dir('task3-multienv-microservices') {
+      sh """
+        set -euo pipefail
+        cd terraform
+        terraform init -input=false
+        terraform workspace select ${envName} || terraform workspace new ${envName}
+        CLUSTER=\$(terraform output -raw cluster_name)
+        cd ..
 
-      aws eks update-kubeconfig --region "${AWS_REGION}" --name "\${CLUSTER}"
+        aws eks update-kubeconfig --region "${AWS_REGION}" --name "\${CLUSTER}"
 
-      # Pin the SAME immutable sha into the overlay before applying.
-      cd k8s/overlays/${envName}
-      kustomize edit set image ${BASE_NAME}/api-gateway=${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}
-      kustomize edit set image ${BASE_NAME}/orders=${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}
-      cd ../../..
+        # Pin the SAME immutable sha into the overlay before applying.
+        cd k8s/overlays/${envName}
+        kustomize edit set image ${BASE_NAME}/api-gateway=${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}
+        kustomize edit set image ${BASE_NAME}/orders=${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}
+        cd ../../..
 
-      kubectl apply -k k8s/overlays/${envName}
-    """
+        kubectl apply -k k8s/overlays/${envName}
+      """
+    }
   }
 }

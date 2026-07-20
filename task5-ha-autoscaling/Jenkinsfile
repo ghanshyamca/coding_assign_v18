@@ -1,9 +1,9 @@
 // Declarative Jenkins pipeline for building, pushing and deploying ha-app to EKS.
 //
 // Credentials (configure in Jenkins > Manage Credentials):
-//   * aws-creds        - AWS access key/secret (Username/Password or AWS creds
-//                        binding) with rights to ECR + EKS. Alternatively run
-//                        Jenkins on an EC2/IRSA node role and drop this block.
+//   * aws-credentials  - kind "AWS Credentials" (same entry as tasks 1-4)
+//                        with rights to ECR + EKS. Alternatively run Jenkins
+//                        on an EC2 instance role and drop the withCredentials.
 // Required agent tooling: docker, aws cli v2, kubectl.
 
 pipeline {
@@ -38,20 +38,22 @@ pipeline {
 
     stage('Resolve ECR registry') {
       steps {
-        script {
-          env.ACCOUNT_ID = sh(
-            script: "aws sts get-caller-identity --query Account --output text",
-            returnStdout: true
-          ).trim()
-          env.ECR_URL = "${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO}"
-          echo "Image will be: ${env.ECR_URL}:${env.IMAGE_TAG}"
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          script {
+            env.ACCOUNT_ID = sh(
+              script: "aws sts get-caller-identity --query Account --output text",
+              returnStdout: true
+            ).trim()
+            env.ECR_URL = "${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO}"
+            echo "Image will be: ${env.ECR_URL}:${env.IMAGE_TAG}"
+          }
         }
       }
     }
 
     stage('Build') {
       steps {
-        dir('app') {
+        dir('task5-ha-autoscaling/app') {
           sh "docker build -t ${env.APP_NAME}:${env.IMAGE_TAG} ."
         }
       }
@@ -59,7 +61,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        dir('app') {
+        dir('task5-ha-autoscaling/app') {
           sh 'npm install --no-audit --no-fund'
           sh 'npm test'
         }
@@ -68,49 +70,61 @@ pipeline {
 
     stage('ECR login + push') {
       steps {
-        sh """
-          aws ecr get-login-password --region ${env.AWS_REGION} \
-            | docker login --username AWS --password-stdin ${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com
-          docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.ECR_URL}:${env.IMAGE_TAG}
-          docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.ECR_URL}:latest
-          docker push ${env.ECR_URL}:${env.IMAGE_TAG}
-          docker push ${env.ECR_URL}:latest
-        """
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh """
+            aws ecr get-login-password --region ${env.AWS_REGION} \
+              | docker login --username AWS --password-stdin ${env.ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com
+            docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.ECR_URL}:${env.IMAGE_TAG}
+            docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.ECR_URL}:latest
+            docker push ${env.ECR_URL}:${env.IMAGE_TAG}
+            docker push ${env.ECR_URL}:latest
+          """
+        }
       }
     }
 
     stage('Update kubeconfig') {
       steps {
-        sh "aws eks update-kubeconfig --region ${env.AWS_REGION} --name ${env.CLUSTER_NAME}"
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh "aws eks update-kubeconfig --region ${env.AWS_REGION} --name ${env.CLUSTER_NAME}"
+        }
       }
     }
 
     stage('Deploy') {
       steps {
-        sh """
-          kubectl apply -f k8s/namespace.yaml
+        dir('task5-ha-autoscaling') {
+          withCredentials([aws(credentialsId: 'aws-credentials')]) {
+            sh """
+              kubectl apply -f k8s/namespace.yaml
 
-          # Inject the freshly pushed image into the deployment manifest.
-          sed 's|<ECR_URL>:latest|${env.ECR_URL}:${env.IMAGE_TAG}|g' k8s/deployment.yaml \
-            | kubectl apply -f -
+              # Inject the freshly pushed image into the deployment manifest.
+              sed 's|<ECR_URL>:latest|${env.ECR_URL}:${env.IMAGE_TAG}|g' k8s/deployment.yaml \
+                | kubectl apply -f -
 
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/hpa.yaml
-          kubectl apply -f k8s/pdb.yaml
-        """
+              kubectl apply -f k8s/service.yaml
+              kubectl apply -f k8s/hpa.yaml
+              kubectl apply -f k8s/pdb.yaml
+            """
+          }
+        }
       }
     }
 
     stage('Verify rollout') {
       steps {
-        sh "kubectl -n ${env.K8S_NS} rollout status deployment/${env.APP_NAME} --timeout=180s"
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh "kubectl -n ${env.K8S_NS} rollout status deployment/${env.APP_NAME} --timeout=180s"
+        }
       }
     }
 
     stage('Show HPA') {
       steps {
-        sh "kubectl -n ${env.K8S_NS} get hpa ${env.APP_NAME}"
-        sh "kubectl -n ${env.K8S_NS} get pods -o wide"
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
+          sh "kubectl -n ${env.K8S_NS} get hpa ${env.APP_NAME}"
+          sh "kubectl -n ${env.K8S_NS} get pods -o wide"
+        }
       }
     }
   }

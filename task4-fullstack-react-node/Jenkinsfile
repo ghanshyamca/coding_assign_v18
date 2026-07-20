@@ -6,8 +6,8 @@
 //   - Pipeline: AWS Steps (or use the AWS CLI on the agent)
 //   - Kubernetes CLI (or kubectl available on the agent)
 // Required credentials (Manage Jenkins > Credentials):
-//   - aws-credentials : AWS access key/secret (or use an IAM instance role
-//     on the agent and drop withCredentials).
+//   - aws-credentials : kind "AWS Credentials" (same entry as tasks 1-3;
+//     or use an IAM instance role on the agent and drop withCredentials).
 // Agent prerequisites: docker, aws cli v2, kubectl, node 20.
 
 pipeline {
@@ -15,7 +15,7 @@ pipeline {
 
   environment {
     AWS_REGION    = 'us-east-1'
-    AWS_ACCOUNT   = credentials('aws-account-id')       // e.g. 123456789012
+    AWS_ACCOUNT   = '848504403205'
     CLUSTER_NAME  = 'fullstack-dev-eks'
     K8S_NAMESPACE = 'fullstack'
 
@@ -44,7 +44,7 @@ pipeline {
       parallel {
         stage('Backend') {
           steps {
-            dir('backend') {
+            dir('task4-fullstack-react-node/backend') {
               sh 'npm ci'
               sh 'npm test'
             }
@@ -52,7 +52,7 @@ pipeline {
         }
         stage('Frontend') {
           steps {
-            dir('frontend') {
+            dir('task4-fullstack-react-node/frontend') {
               sh 'npm ci'
               sh 'npm test'
               sh 'npm run build'
@@ -64,10 +64,7 @@ pipeline {
 
     stage('ECR Login') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'aws-credentials',
-          usernameVariable: 'AWS_ACCESS_KEY_ID',
-          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             aws ecr get-login-password --region "$AWS_REGION" \
               | docker login --username AWS --password-stdin "$ECR_REGISTRY"
@@ -81,7 +78,7 @@ pipeline {
       parallel {
         stage('Backend Image') {
           steps {
-            dir('backend') {
+            dir('task4-fullstack-react-node/backend') {
               sh '''
                 docker build -t "$ECR_REGISTRY/$BACKEND_REPO:$IMAGE_TAG" \
                              -t "$ECR_REGISTRY/$BACKEND_REPO:latest" .
@@ -93,7 +90,7 @@ pipeline {
         }
         stage('Frontend Image') {
           steps {
-            dir('frontend') {
+            dir('task4-fullstack-react-node/frontend') {
               sh '''
                 docker build -t "$ECR_REGISTRY/$FRONTEND_REPO:$IMAGE_TAG" \
                              -t "$ECR_REGISTRY/$FRONTEND_REPO:latest" .
@@ -108,10 +105,7 @@ pipeline {
 
     stage('Configure kubectl') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'aws-credentials',
-          usernameVariable: 'AWS_ACCESS_KEY_ID',
-          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
           '''
@@ -121,18 +115,15 @@ pipeline {
 
     stage('Deploy to EKS') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'aws-credentials',
-          usernameVariable: 'AWS_ACCESS_KEY_ID',
-          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             # Ensure namespace and base manifests exist (idempotent).
-            kubectl apply -f k8s/namespace.yaml
-            kubectl apply -f k8s/backend-deployment.yaml
-            kubectl apply -f k8s/backend-service.yaml
-            kubectl apply -f k8s/frontend-deployment.yaml
-            kubectl apply -f k8s/frontend-service.yaml
-            kubectl apply -f k8s/ingress.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/namespace.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/backend-deployment.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/backend-service.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/frontend-deployment.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/frontend-service.yaml
+            kubectl apply -f task4-fullstack-react-node/k8s/ingress.yaml
 
             # Roll out the freshly built, sha-tagged images for both services.
             kubectl -n "$K8S_NAMESPACE" set image deployment/fullstack-backend \
@@ -146,10 +137,7 @@ pipeline {
 
     stage('Verify Rollouts') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'aws-credentials',
-          usernameVariable: 'AWS_ACCESS_KEY_ID',
-          passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             kubectl -n "$K8S_NAMESPACE" rollout status deployment/fullstack-backend --timeout=180s
             kubectl -n "$K8S_NAMESPACE" rollout status deployment/fullstack-frontend --timeout=180s

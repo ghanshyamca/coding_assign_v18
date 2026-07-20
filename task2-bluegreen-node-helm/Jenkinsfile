@@ -6,8 +6,8 @@
 //       verify. Rollback = flip the router back (see README).
 //
 // Required Jenkins credentials / config:
-//   * aws-creds        (AWS Username+Password OR use an IAM instance role on
-//                       the Jenkins agent) — needs ECR push + eks:DescribeCluster.
+//   * aws-credentials  (kind: "AWS Credentials" — same entry as task 1)
+//                       — needs ECR push + eks:DescribeCluster.
 //   * Jenkins agent must have: docker, awscli v2, kubectl, helm, node 20, jq.
 //   * The agent's IAM principal must be mapped in the EKS aws-auth / access
 //     entries with permission to deploy (see terraform enable_cluster_creator).
@@ -21,7 +21,7 @@ pipeline {
     string(name: 'CLUSTER_NAME', defaultValue: 'bluegreen-node-eks',  description: 'EKS cluster name')
     string(name: 'ECR_REPO',     defaultValue: 'bluegreen-node',      description: 'ECR repository name')
     string(name: 'NAMESPACE',    defaultValue: 'default',             description: 'Kubernetes namespace')
-    string(name: 'CHART_PATH',   defaultValue: 'helm/bluegreen-node', description: 'Path to the Helm chart')
+    string(name: 'CHART_PATH',   defaultValue: 'task2-bluegreen-node-helm/helm/bluegreen-node', description: 'Path to the Helm chart (repo-root relative)')
   }
 
   options {
@@ -52,7 +52,7 @@ pipeline {
 
     stage('Build & Test') {
       steps {
-        dir('app') {
+        dir('task2-bluegreen-node-helm/app') {
           sh 'npm ci'
           sh 'npm test'
         }
@@ -61,7 +61,7 @@ pipeline {
 
     stage('Docker Build & Push to ECR') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           script {
             env.ACCOUNT_ID = sh(script: 'aws sts get-caller-identity --query Account --output text', returnStdout: true).trim()
             env.ECR_URL    = "${env.ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com/${params.ECR_REPO}"
@@ -70,7 +70,7 @@ pipeline {
             set -euo pipefail
             aws ecr get-login-password --region ${AWS_REGION} \
               | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-            docker build -t ${ECR_URL}:${GIT_SHA} -t ${ECR_URL}:latest ./app
+            docker build -t ${ECR_URL}:${GIT_SHA} -t ${ECR_URL}:latest ./task2-bluegreen-node-helm/app
             docker push ${ECR_URL}:${GIT_SHA}
             docker push ${ECR_URL}:latest
           '''
@@ -80,7 +80,7 @@ pipeline {
 
     stage('Configure kubectl') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh 'aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}'
         }
       }
@@ -90,7 +90,7 @@ pipeline {
       steps {
         // kubectl talks to EKS through the aws-eks exec plugin, so AWS
         // credentials must be bound here too (same as the helm stages).
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           script {
             // Read the current live track from the production Service selector.
             // Empty on a first-ever deploy (Service doesn't exist yet).
@@ -123,7 +123,7 @@ pipeline {
 
     stage('Deploy to Idle Color') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             set -euo pipefail
             helm upgrade --install app-${IDLE_COLOR} ${CHART_PATH} \
@@ -146,7 +146,7 @@ pipeline {
 
     stage('Smoke Test Idle Color') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             set -euo pipefail
             # Hit the idle color's preview Service from an ephemeral pod.
@@ -167,7 +167,7 @@ pipeline {
 
     stage('Cut Over') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           // Canonical cutover: helm upgrade the router so Helm stays the source
           // of truth (enables `helm rollback app-router`).
           sh '''
@@ -187,7 +187,7 @@ pipeline {
 
     stage('Verify') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh '''
             set -euo pipefail
             ACTIVE=$(kubectl -n ${NAMESPACE} get svc ${APP_NAME}-active -o jsonpath='{.spec.selector.track}')
@@ -217,7 +217,7 @@ pipeline {
     }
     always {
       script {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+        withCredentials([aws(credentialsId: 'aws-credentials')]) {
           sh 'kubectl -n ${NAMESPACE} get svc,deploy -l app.kubernetes.io/name=${APP_NAME} || true'
         }
       }
