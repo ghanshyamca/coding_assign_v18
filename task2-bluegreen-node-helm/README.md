@@ -209,6 +209,13 @@ Parameters: `AWS_REGION`, `CLUSTER_NAME`, `ECR_REPO`, `NAMESPACE`, `CHART_PATH`.
 Credentials: `aws-credentials` (kind: AWS Credentials) — see the header comment in the Jenkinsfile.
 
 ---
+<img width="1915" height="846" alt="image" src="https://github.com/user-attachments/assets/a7da0a95-52fc-4e1b-82ef-b79d4597e90d" />
+
+<img width="1522" height="820" alt="image" src="https://github.com/user-attachments/assets/417b93e2-0ab3-4223-91f3-b940ba7868b3" />
+
+
+<img width="1920" height="11716" alt="image" src="https://github.com/user-attachments/assets/118f79e7-ea9e-4b1e-9104-a372e29b34f6" />
+
 
 ## ROLLBACK STRATEGY
 
