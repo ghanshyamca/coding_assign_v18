@@ -99,6 +99,18 @@ aws eks update-kubeconfig --region us-east-1 --name bluegreen-node-eks
 # Note the ECR URL for image pushes:
 terraform output ecr_url
 ```
+<img width="1352" height="441" alt="image" src="https://github.com/user-attachments/assets/c882bee3-9d9b-45bd-8ad6-76eefb32e6d5" />
+
+<img width="1885" height="960" alt="image" src="https://github.com/user-attachments/assets/a28b80d7-24df-4ea1-b974-3b10233db155" />
+
+<img width="1891" height="997" alt="image" src="https://github.com/user-attachments/assets/9ccad12a-af5c-4334-8c63-35b0c6145256" />
+
+<img width="1918" height="967" alt="image" src="https://github.com/user-attachments/assets/c8dafe04-779e-436b-9d9f-88606792996b" />
+
+<img width="1545" height="987" alt="image" src="https://github.com/user-attachments/assets/8cf55ab5-8fb1-4587-a627-2ec368457965" />
+
+<img width="1920" height="2100" alt="image" src="https://github.com/user-attachments/assets/3457e934-442d-47fc-95ae-2d2064778ab7" />
+
 
 This creates a VPC, an EKS 1.33 cluster with a `t3.medium` managed node group
 (min 2 / desired 2 / max 4), IRSA/OIDC, an ECR repo (scan-on-push, keep last 10),
