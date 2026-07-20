@@ -206,7 +206,7 @@ Service selector — shown as a comment in the Jenkinsfile.
 11. **post{}** — reports result, leaves the previous color warm, cleans workspace.
 
 Parameters: `AWS_REGION`, `CLUSTER_NAME`, `ECR_REPO`, `NAMESPACE`, `CHART_PATH`.
-Credentials: `aws-creds` (AWS access) — see the header comment in the Jenkinsfile.
+Credentials: `aws-credentials` (kind: AWS Credentials) — see the header comment in the Jenkinsfile.
 
 ---
 
