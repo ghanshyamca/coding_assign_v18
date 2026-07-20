@@ -178,6 +178,7 @@ helm upgrade --install app-router helm/bluegreen-node \
   -f helm/bluegreen-node/values-router.yaml \
   --set productionService.activeTrack=green --wait
 ```
+<img width="1018" height="366" alt="image" src="https://github.com/user-attachments/assets/42e453fc-0ec9-431e-8984-36059790e233" />
 
 The endpoints behind the Service switch atomically to green's pods. An imperative
 alternative (faster, but drifts from Helm state) is a `kubectl patch` of the
