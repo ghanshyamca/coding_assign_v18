@@ -97,7 +97,7 @@ terraform workspace show
 After apply, wire up kubectl using the emitted output:
 
 ```bash
-aws eks update-kubeconfig --region ap-south-1 --name microsvc-dev
+aws eks update-kubeconfig --region us-east-1 --name microsvc-dev
 ```
 
 ---
@@ -156,14 +156,14 @@ Manual (mirrors what Jenkins automates):
 cd terraform && terraform workspace select dev && terraform apply -var-file=dev.tfvars
 
 # 2. kubeconfig
-aws eks update-kubeconfig --region ap-south-1 --name microsvc-dev
+aws eks update-kubeconfig --region us-east-1 --name microsvc-dev
 
 # 3. pin image + deploy
 cd ../k8s/overlays/dev
 kustomize edit set image \
-  microsvc/api-gateway=<ACCOUNT>.dkr.ecr.ap-south-1.amazonaws.com/microsvc/api-gateway:<sha>
+  microsvc/api-gateway=<ACCOUNT>.dkr.ecr.us-east-1.amazonaws.com/microsvc/api-gateway:<sha>
 kustomize edit set image \
-  microsvc/orders=<ACCOUNT>.dkr.ecr.ap-south-1.amazonaws.com/microsvc/orders:<sha>
+  microsvc/orders=<ACCOUNT>.dkr.ecr.us-east-1.amazonaws.com/microsvc/orders:<sha>
 cd ../../.. && kubectl apply -k k8s/overlays/dev
 
 # 4. verify
@@ -184,7 +184,7 @@ approve -> Deploy PROD**, with a `post{}` block for cleanup/notification.
   approval gates control how far a build promotes.
 - `deployEnv(env)` selects the Terraform workspace, refreshes kubeconfig,
   pins the immutable sha into the overlay, and `kubectl apply -k`.
-- Region/registry are env vars; AWS creds come from the `aws-creds`
+- Region/registry are env vars; AWS creds come from the `aws-credentials`
   credential (swap for an IAM instance role in real clusters).
 
 ---

@@ -34,7 +34,7 @@ pipeline {
   }
 
   environment {
-    AWS_REGION   = 'ap-south-1'                   // region the microsvc-* clusters run in
+    AWS_REGION   = 'us-east-1'                   // region the microsvc-* clusters run in
     AWS_ACCOUNT  = '848504403205'
     REGISTRY     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
     BASE_NAME    = 'microsvc'

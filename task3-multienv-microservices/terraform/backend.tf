@@ -18,13 +18,15 @@
 
 terraform {
   backend "s3" {
-    bucket = "REPLACE-ME-microsvc-tfstate"
+    bucket = "microsvc-tfstate"
 
     # Combined with the workspace name this yields
     #   microsvc/<workspace>/terraform.tfstate
     workspace_key_prefix = "microsvc"
     key                  = "terraform.tfstate"
 
+    # Region of the STATE BUCKET (not the infra) — microsvc-tfstate lives in
+    # us-east-1; the clusters' region comes from var.aws_region instead.
     region         = "us-east-1"
     dynamodb_table = "microsvc-tf-locks"
     encrypt        = true
