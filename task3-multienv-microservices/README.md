@@ -201,6 +201,12 @@ kubectl apply -k k8s/overlays/$ENV
 kubectl -n microsvc-$ENV rollout status deploy/api-gateway --timeout=180s
 kubectl -n microsvc-$ENV rollout status deploy/orders --timeout=180s
 ```
+<img width="1687" height="825" alt="image" src="https://github.com/user-attachments/assets/baae3e17-4aa6-489a-8a12-2df65c6b7b88" />
+
+<img width="1181" height="621" alt="image" src="https://github.com/user-attachments/assets/06817c6c-d6fa-445a-bc5d-15e42d0204c4" />
+
+<img width="1550" height="692" alt="image" src="https://github.com/user-attachments/assets/a8d2e4e4-24ad-45ba-8901-9bc5eb54a451" />
+
 
 This guarantees the exact bytes tested in dev are what run in prod.
 
