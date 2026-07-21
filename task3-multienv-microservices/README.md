@@ -93,6 +93,27 @@ terraform apply -var-file=prod.tfvars
 # verify which env you are on
 terraform workspace show
 ```
+<img width="1316" height="223" alt="image" src="https://github.com/user-attachments/assets/1392323a-abc3-4ebb-a54e-d12d0809db12" />
+
+<img width="1442" height="436" alt="image" src="https://github.com/user-attachments/assets/d04af825-d253-4304-9ac9-7363d663d43f" />
+
+<img width="1258" height="575" alt="image" src="https://github.com/user-attachments/assets/19c25d68-9807-4771-9498-b62b982df9a1" />
+
+<img width="1797" height="1008" alt="image" src="https://github.com/user-attachments/assets/2aad7c0b-ae98-4437-bb3c-0ed7b1489b09" />
+
+<img width="1813" height="941" alt="image" src="https://github.com/user-attachments/assets/7d6c8795-c5e0-44ce-ac48-03e28248edf6" />
+
+<img width="1918" height="931" alt="image" src="https://github.com/user-attachments/assets/bf0aebf2-c3dd-4cdc-8b30-fd45f1271849" />
+
+<img width="1920" height="2077" alt="image" src="https://github.com/user-attachments/assets/e80b2596-d02d-4e8d-94b6-c63c419d8f90" />
+
+<img width="1892" height="888" alt="image" src="https://github.com/user-attachments/assets/96f21901-6409-47b3-a017-0a15012ac50d" />
+
+<img width="1918" height="952" alt="image" src="https://github.com/user-attachments/assets/cefcd86c-8cc8-4824-a9bd-4e269a49f4b6" />
+
+<img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/94f93bce-cd49-4661-9a17-25e6df011050" />
+
+
 
 After apply, wire up kubectl using the emitted output:
 
