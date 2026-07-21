@@ -295,5 +295,15 @@ cd terraform
 terraform destroy
 ```
 
+<img width="1365" height="332" alt="image" src="https://github.com/user-attachments/assets/2b508e92-fc3f-4c7f-b072-e5e929334eb0" />
+
+<img width="1892" height="547" alt="image" src="https://github.com/user-attachments/assets/e2b4d9ad-899b-42a0-bc0d-776a428c4eaf" />
+
+<img width="1918" height="982" alt="image" src="https://github.com/user-attachments/assets/ab5ebdbb-ec4d-423d-8a48-4148099485b7" />
+
+<img width="1897" height="512" alt="image" src="https://github.com/user-attachments/assets/11b45ba7-531f-402c-9358-ced47efd0cc9" />
+
+
+
 > If the LoadBalancer Service was created, ensure it is deleted (above) before
 > `terraform destroy` so the ELB and its ENIs don't block VPC deletion.
