@@ -133,6 +133,7 @@ After apply, wire up kubectl using the emitted output:
 ```bash
 aws eks update-kubeconfig --region us-east-1 --name microsvc-dev
 ```
+<img width="1092" height="68" alt="image" src="https://github.com/user-attachments/assets/0e0c4614-7c37-4f35-b808-e664bf5a9c33" />
 
 ---
 
