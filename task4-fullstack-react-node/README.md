@@ -199,18 +199,14 @@ kubectl -n fullstack port-forward svc/fullstack-frontend 8080:80
 # then browse http://localhost:8080
 ```
 
+<img width="1910" height="276" alt="image" src="https://github.com/user-attachments/assets/9f579056-0182-44d7-a421-c789657a851e" />
+
+<img width="1915" height="966" alt="image" src="https://github.com/user-attachments/assets/24293581-502f-4b0c-907d-c59741d13d60" />
+
+<img width="1917" height="927" alt="image" src="https://github.com/user-attachments/assets/915f8f0c-113f-4b15-9de7-f49659c97012" />
+
+
 You should see the page render the string returned by `GET /api/message`.
-
-## Security notes
-
-- Images are multi-stage and run as **non-root** (`node` uid 1000 / `nginx`
-  uid 101). Pods set `runAsNonRoot`, `readOnlyRootFilesystem`,
-  `allowPrivilegeEscalation: false`, drop all capabilities, and use the
-  `RuntimeDefault` seccomp profile.
-- ECR has `scan_on_push` enabled and AES256 encryption at rest.
-- EKS uses IRSA/OIDC; nodes run in **private subnets** behind a NAT gateway.
-- Frontend nginx listens on unprivileged port 8080 with a writable `/tmp`
-  emptyDir, keeping the container root filesystem read-only.
 
 ## Teardown
 
