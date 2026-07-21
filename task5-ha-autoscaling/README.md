@@ -209,6 +209,10 @@ Now generate load:
 kubectl apply -f k8s/load-generator.yaml
 ```
 
+<img width="1918" height="1015" alt="image" src="https://github.com/user-attachments/assets/e01365b1-6572-44b7-b48a-12befdc49d92" />
+
+<img width="1918" height="1003" alt="image" src="https://github.com/user-attachments/assets/809dbd59-f9c9-4e23-8c4e-d0cf86f6f883" />
+
 What you should observe:
 
 1. Within ~30–60s the HPA `TARGETS` column climbs past `60%` and `REPLICAS`
@@ -223,11 +227,18 @@ What you should observe:
 
 Stop the load and watch it scale back in:
 
+<img width="1058" height="200" alt="image" src="https://github.com/user-attachments/assets/13aa5640-f0c5-470b-b043-53e15bad1b4c" />
+
+<img width="1918" height="411" alt="image" src="https://github.com/user-attachments/assets/2137dd4f-a4ca-413a-9a38-85c581043ca8" />
+
 ```bash
 kubectl -n ha-app delete job ha-app-load
 # HPA scales pods down after its scaleDown stabilization window (5 min),
 # then CA removes now-empty nodes after ~10 min, never below 2 nodes.
 ```
+<img width="998" height="170" alt="image" src="https://github.com/user-attachments/assets/5653c5d5-815b-46ca-81ee-eb60222bd858" />
+
+<img width="1027" height="198" alt="image" src="https://github.com/user-attachments/assets/0c2580a6-b136-4607-b011-6db525ee1063" />
 
 ---
 
