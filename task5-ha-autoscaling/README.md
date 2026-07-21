@@ -262,6 +262,9 @@ agent on an IRSA/instance role) with ECR + EKS permissions.
 
 <img width="1497" height="775" alt="image" src="https://github.com/user-attachments/assets/c2c7a360-5501-470f-818f-320ac5be226a" />
 
+<img width="1920" height="13915" alt="image" src="https://github.com/user-attachments/assets/fea7995c-4ce4-462b-ab94-d0d2b0723693" />
+
+<img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/6c55afe6-e197-4ff3-b1a6-884fbe152311" />
 
 ---
 
