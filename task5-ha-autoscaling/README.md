@@ -303,6 +303,7 @@ terraform destroy
 
 <img width="1897" height="512" alt="image" src="https://github.com/user-attachments/assets/11b45ba7-531f-402c-9358-ced47efd0cc9" />
 
+<img width="1918" height="997" alt="image" src="https://github.com/user-attachments/assets/2a638e74-f368-4262-8276-db100c41904f" />
 
 
 > If the LoadBalancer Service was created, ensure it is deleted (above) before
