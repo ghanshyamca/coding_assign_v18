@@ -274,6 +274,8 @@ approve -> Deploy PROD**, with a `post{}` block for cleanup/notification.
 - Region/registry are env vars; AWS creds come from the `aws-credentials`
   credential (swap for an IAM instance role in real clusters).
 
+<img width="1920" height="1372" alt="image" src="https://github.com/user-attachments/assets/31abebab-6ea4-4172-b0e3-f77b456b6cc5" />
+
 ---
 
 ## 7. Teardown (per workspace)
