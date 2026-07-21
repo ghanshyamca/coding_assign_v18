@@ -24,8 +24,9 @@ pipeline {
     ECR_REPO     = 'flask-eks'
     CLUSTER_NAME = 'flask-eks'
     K8S_NAMESPACE = 'flask-eks'
-    // Short git SHA is resolved in the Checkout stage.
-    IMAGE_TAG    = "build-${BUILD_NUMBER}"
+    // NOTE: IMAGE_TAG is deliberately not declared here — environment{}
+    // declarations mask later `env.X = ...` assignments, and IMAGE_TAG is
+    // resolved to the short git SHA in the Checkout stage.
 
     // Monorepo: this task lives in a subdirectory of the repo, so stages that
     // touch files wrap their steps in dir(TASK_DIR).
