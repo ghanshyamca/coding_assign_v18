@@ -117,15 +117,31 @@ terraform output ecr_url
 terraform output cluster_autoscaler_role_arn
 ```
 
+<img width="1222" height="978" alt="image" src="https://github.com/user-attachments/assets/2a4036b7-2e20-43fd-a83f-867557ea0f16" />
+
+<img width="1613" height="915" alt="image" src="https://github.com/user-attachments/assets/33b63878-e701-4dd8-8078-bdc7e2bf8d56" />
+
+<img width="1871" height="957" alt="image" src="https://github.com/user-attachments/assets/384eedc5-51bd-4728-9d84-54e7a13a08b1" />
+
+<img width="1851" height="967" alt="image" src="https://github.com/user-attachments/assets/3cecea64-9b52-40ef-a6eb-818021dcb9da" />
+
+<img width="1792" height="932" alt="image" src="https://github.com/user-attachments/assets/048528a8-ba4b-41e8-94b1-2e3404f8e6d0" />
+
+<img width="1097" height="212" alt="image" src="https://github.com/user-attachments/assets/bb42546d-3787-45c0-b9f2-ab2ce85b6263" />
+
+<img width="1920" height="2088" alt="image" src="https://github.com/user-attachments/assets/e5575e0f-6aac-483f-9c28-e6e2f4bc04f1" />
+
 > Remote state: copy `backend.tf.example` to `backend.tf` and fill in your S3
 > bucket + DynamoDB lock table before `terraform init` for team/CI use.
 
 Verify the autoscaling controllers are running:
 
 ```bash
-kubectl -n kube-system get deploy metrics-server cluster-autoscaler
+kubectl -n kube-system get deploy cluster-autoscaler-aws-cluster-autoscaler
 kubectl top nodes           # confirms metrics-server is serving metrics
 ```
+
+<img width="905" height="251" alt="image" src="https://github.com/user-attachments/assets/393c0aec-6a56-4a00-8338-895a349ec85a" />
 
 ---
 
@@ -143,6 +159,10 @@ cd app
 docker build -t ${ECR_URL}:latest .
 docker push ${ECR_URL}:latest
 ```
+
+<img width="1918" height="977" alt="image" src="https://github.com/user-attachments/assets/5dfbba1b-98e6-46ae-b090-787e34b49050" />
+
+<img width="1918" height="917" alt="image" src="https://github.com/user-attachments/assets/2bea13f0-147a-4e48-8061-bb4e1e9749f1" />
 
 (In CI this is done automatically by the `Jenkinsfile`, tagging with the git SHA.)
 
@@ -163,6 +183,8 @@ kubectl apply -f k8s/pdb.yaml
 kubectl -n ha-app rollout status deployment/ha-app
 kubectl -n ha-app get hpa ha-app
 ```
+
+<img width="1041" height="488" alt="image" src="https://github.com/user-attachments/assets/a3784810-3a09-426e-872b-2a11ab076e89" />
 
 ---
 
@@ -233,6 +255,13 @@ kubectl -n ha-app delete job ha-app-load
 (git-sha tag) → Update kubeconfig → Deploy (apply deployment/service/hpa) →
 Verify rollout → Show HPA**. Configure an `aws-creds` credential (or run the
 agent on an IRSA/instance role) with ECR + EKS permissions.
+
+<img width="1920" height="1372" alt="image" src="https://github.com/user-attachments/assets/a98e23c9-f12e-4745-8bb9-a25094fd22d0" />
+
+<img width="1920" height="3682" alt="image" src="https://github.com/user-attachments/assets/d89fc0e8-0301-4cff-982e-1479963eddec" />
+
+<img width="1497" height="775" alt="image" src="https://github.com/user-attachments/assets/c2c7a360-5501-470f-818f-320ac5be226a" />
+
 
 ---
 
