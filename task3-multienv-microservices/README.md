@@ -146,12 +146,49 @@ single artifact is promoted:
 build :<sha>  ->  DEV  --approve-->  STAGING  --approve-->  PROD
 ```
 
-No environment rebuilds the image. At deploy time the pipeline only re-points
-the kustomize overlay at the already-pushed sha:
+### Exact commands (manual run, from the `task3-multienv-microservices/` directory)
+
+**Step 1 — resolve variables once** (used by every command below):
 
 ```bash
-kustomize edit set image microsvc/api-gateway=<ECR_URL>/microsvc/api-gateway:<sha>
-kustomize edit set image microsvc/orders=<ECR_URL>/microsvc/orders:<sha>
+AWS_REGION=us-east-1
+ACCOUNT=848504403205
+REGISTRY=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
+SHA=$(git rev-parse HEAD)          # the immutable tag for this commit
+echo "Building tag: $SHA"
+```
+
+**Step 2 — build once and push** (this happens exactly one time per commit):
+
+```bash
+aws ecr get-login-password --region $AWS_REGION \
+  | docker login --username AWS --password-stdin $REGISTRY
+
+docker build -t $REGISTRY/microsvc/api-gateway:$SHA services/api-gateway
+docker build -t $REGISTRY/microsvc/orders:$SHA      services/orders
+
+docker push $REGISTRY/microsvc/api-gateway:$SHA
+docker push $REGISTRY/microsvc/orders:$SHA
+```
+
+> The repos are `IMMUTABLE`: pushing the same tag twice is rejected, which
+> enforces the "never rebuilt" guarantee.
+
+**Step 3 — promote the SAME sha to an environment** (repeat per env, no
+rebuild — only the overlay's image pin changes):
+
+```bash
+ENV=dev        # then: staging, prod
+aws eks update-kubeconfig --region $AWS_REGION --name microsvc-$ENV
+
+cd k8s/overlays/$ENV
+kustomize edit set image microsvc/api-gateway=$REGISTRY/microsvc/api-gateway:$SHA
+kustomize edit set image microsvc/orders=$REGISTRY/microsvc/orders:$SHA
+cd ../../..
+
+kubectl apply -k k8s/overlays/$ENV
+kubectl -n microsvc-$ENV rollout status deploy/api-gateway --timeout=180s
+kubectl -n microsvc-$ENV rollout status deploy/orders --timeout=180s
 ```
 
 This guarantees the exact bytes tested in dev are what run in prod.
@@ -183,21 +220,20 @@ kubectl apply -k k8s/overlays/dev
 
 ## 5. Deploy each environment
 
-Manual (mirrors what Jenkins automates):
+Manual (mirrors what Jenkins automates). Uses the `AWS_REGION` / `REGISTRY` /
+`SHA` variables from section 3, step 1:
 
 ```bash
 # 1. infra
-cd terraform && terraform workspace select dev && terraform apply -var-file=dev.tfvars
+cd terraform && terraform workspace select dev && terraform apply -var-file=dev.tfvars && cd ..
 
 # 2. kubeconfig
-aws eks update-kubeconfig --region us-east-1 --name microsvc-dev
+aws eks update-kubeconfig --region $AWS_REGION --name microsvc-dev
 
 # 3. pin image + deploy
-cd ../k8s/overlays/dev
-kustomize edit set image \
-  microsvc/api-gateway=<ACCOUNT>.dkr.ecr.us-east-1.amazonaws.com/microsvc/api-gateway:<sha>
-kustomize edit set image \
-  microsvc/orders=<ACCOUNT>.dkr.ecr.us-east-1.amazonaws.com/microsvc/orders:<sha>
+cd k8s/overlays/dev
+kustomize edit set image microsvc/api-gateway=$REGISTRY/microsvc/api-gateway:$SHA
+kustomize edit set image microsvc/orders=$REGISTRY/microsvc/orders:$SHA
 cd ../../.. && kubectl apply -k k8s/overlays/dev
 
 # 4. verify
