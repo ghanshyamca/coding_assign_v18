@@ -282,6 +282,7 @@ approve -> Deploy PROD**, with a `post{}` block for cleanup/notification.
 
 <img width="1918" height="587" alt="image" src="https://github.com/user-attachments/assets/b10cc975-dfb9-4369-969c-c548433a498c" />
 
+<img width="1912" height="845" alt="image" src="https://github.com/user-attachments/assets/39e0a2e2-bbf2-40ef-ba36-fdb6f3a2c2c1" />
 
 ---
 
@@ -302,22 +303,27 @@ terraform workspace delete dev
 terraform workspace delete staging
 terraform workspace delete prod
 ```
+<img width="1635" height="687" alt="image" src="https://github.com/user-attachments/assets/31c74045-96a4-4436-b819-de84ab9b11d4" />
+
+<img width="1503" height="812" alt="image" src="https://github.com/user-attachments/assets/2b72344f-dc84-49a4-a739-b454e71d4666" />
+
+<img width="1165" height="295" alt="image" src="https://github.com/user-attachments/assets/70fd998a-b4c8-4343-aca8-ff6deeb231ac" />
+
+<img width="1910" height="941" alt="image" src="https://github.com/user-attachments/assets/c03f179a-2a9a-4ee3-b689-290c91bd83eb" />
+
+<img width="1918" height="991" alt="image" src="https://github.com/user-attachments/assets/a6ed462e-d9b3-438b-a2ca-899ff62cc390" />
+
+<img width="1040" height="346" alt="image" src="https://github.com/user-attachments/assets/4770c2b4-9888-44f9-8c67-d0c185d3ee83" />
+
+<img width="1918" height="780" alt="image" src="https://github.com/user-attachments/assets/bc48819d-ec76-4f58-b961-c8d1158c09fb" />
+
+<img width="1918" height="980" alt="image" src="https://github.com/user-attachments/assets/5b7f65cd-7f0a-4dec-889a-1fe282ce914e" />
+
+<img width="1633" height="902" alt="image" src="https://github.com/user-attachments/assets/82367471-c833-4db3-adf2-6d079ff46175" />
+
+<img width="1861" height="941" alt="image" src="https://github.com/user-attachments/assets/04977259-fb47-43f6-9501-bde0224d7c4d" />
 
 > ECR images are retained by the lifecycle policy (last 20). Delete the repos
 > manually or via `terraform destroy` in each workspace if you want them gone.
 
 ---
-
-## 8. Design notes
-
-- **Environment segregation** — separate Terraform workspaces (isolated state +
-  isolated VPC/EKS/CIDR per env) and separate Kubernetes namespaces
-  (`microsvc-<env>`). A default-workspace guard prevents accidental mixing.
-- **Modularity** — infra uses upstream `terraform-aws-modules/vpc` and
-  `.../eks`; app config is DRY via a kustomize base + thin overlays; services
-  are independent, individually built and tested.
-- **Security** — immutable ECR tags + scan-on-push; non-root, read-only-rootfs
-  containers dropping all Linux capabilities with `seccompProfile: RuntimeDefault`;
-  private worker subnets; least-surface health-gated rollouts; prod uses
-  one NAT gateway per AZ for availability.
-```
