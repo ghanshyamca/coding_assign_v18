@@ -93,6 +93,13 @@ terraform apply -var-file=prod.tfvars
 # verify which env you are on
 terraform workspace show
 ```
+<img width="1316" height="223" alt="image" src="https://github.com/user-attachments/assets/1392323a-abc3-4ebb-a54e-d12d0809db12" />
+
+<img width="1442" height="436" alt="image" src="https://github.com/user-attachments/assets/d04af825-d253-4304-9ac9-7363d663d43f" />
+
+<img width="1258" height="575" alt="image" src="https://github.com/user-attachments/assets/19c25d68-9807-4771-9498-b62b982df9a1" />
+
+
 
 After apply, wire up kubectl using the emitted output:
 
