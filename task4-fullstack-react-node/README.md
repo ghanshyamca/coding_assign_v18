@@ -62,6 +62,20 @@ terraform init
 terraform plan
 terraform apply
 ```
+<img width="1325" height="438" alt="image" src="https://github.com/user-attachments/assets/8617923e-5404-4542-bb35-eb24aa8f3e5f" />
+
+<img width="1853" height="875" alt="image" src="https://github.com/user-attachments/assets/44003f4a-c124-4ea1-936f-ec3633ca8236" />
+
+<img width="1902" height="967" alt="image" src="https://github.com/user-attachments/assets/a4c6375d-5247-4fc2-89d0-18d2474cf020" />
+
+<img width="1852" height="942" alt="image" src="https://github.com/user-attachments/assets/bbf82000-0ff6-48ab-b6a7-f1e94e6888d3" />
+
+<img width="1918" height="931" alt="image" src="https://github.com/user-attachments/assets/f54a28ae-39cb-4905-9365-4c86efd98465" />
+
+<img width="1812" height="572" alt="image" src="https://github.com/user-attachments/assets/f5969c9c-dc59-447c-bf1f-95c78e04e82f" />
+
+<img width="1917" height="877" alt="image" src="https://github.com/user-attachments/assets/7430ca76-175e-47e8-82b5-e03279051537" />
+
 
 Key outputs:
 
@@ -71,6 +85,8 @@ terraform output frontend_ecr_repository_url
 terraform output backend_ecr_repository_url
 terraform output configure_kubectl   # ready-to-run aws eks update-kubeconfig
 ```
+<img width="1072" height="286" alt="image" src="https://github.com/user-attachments/assets/7c9c3044-af58-48e4-8054-12233e5a4dd9" />
+
 
 `modules/ecr` is invoked twice (`module.ecr_frontend`, `module.ecr_backend`) to
 create both repositories with identical policy (scan-on-push, keep last 10
@@ -84,6 +100,7 @@ S3 bucket + DynamoDB lock table, then `terraform init -migrate-state`.
 ```bash
 aws eks update-kubeconfig --region us-east-1 --name $(terraform -chdir=terraform output -raw cluster_name)
 ```
+<img width="967" height="102" alt="image" src="https://github.com/user-attachments/assets/f067a23f-01a9-47a7-a0f2-d039c6186606" />
 
 ## 3. Build & push both images (manual, or let Jenkins do it)
 
@@ -103,6 +120,12 @@ docker push $REGISTRY/fullstack-backend:$TAG
 docker build -t $REGISTRY/fullstack-frontend:$TAG frontend/
 docker push $REGISTRY/fullstack-frontend:$TAG
 ```
+<img width="1918" height="748" alt="image" src="https://github.com/user-attachments/assets/264d95dc-127c-4bce-94d8-0a3a71bddc6a" />
+
+<img width="1918" height="777" alt="image" src="https://github.com/user-attachments/assets/eff9b789-032d-48f1-8530-181e0400c3e7" />
+
+<img width="1015" height="306" alt="image" src="https://github.com/user-attachments/assets/4583cd8f-2bd1-41f7-8971-a777da800f98" />
+
 
 ## 4. Deploy to EKS
 
