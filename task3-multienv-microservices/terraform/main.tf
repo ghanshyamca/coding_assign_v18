@@ -145,9 +145,21 @@ module "eks" {
 
 ##############################################################################
 # ECR — one repository per service (shared image registry, immutable tags)
+#
+# ECR repository names are account-global, NOT per-workspace: the same
+# microsvc/* repos serve every environment (that's what enables the
+# build-once/promote-same-sha strategy). Only the "dev" workspace creates and
+# owns them; staging/prod reference the same registry by constructed URL.
 ##############################################################################
+data "aws_caller_identity" "current" {}
+
+locals {
+  # The workspace that owns account-global shared resources (ECR).
+  is_ecr_owner = terraform.workspace == "dev"
+}
+
 resource "aws_ecr_repository" "service" {
-  for_each = toset(var.services)
+  for_each = local.is_ecr_owner ? toset(var.services) : toset([])
 
   name                 = "${var.base_name}/${each.value}"
   image_tag_mutability = "IMMUTABLE"

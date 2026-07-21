@@ -24,8 +24,11 @@ output "kubeconfig_command" {
 }
 
 output "ecr_repository_urls" {
-  description = "ECR repository URLs keyed by service name."
-  value       = { for name, repo in aws_ecr_repository.service : name => repo.repository_url }
+  description = "ECR repository URLs keyed by service name (same registry for every workspace; repos are owned by the dev workspace)."
+  value = {
+    for s in var.services :
+    s => "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.base_name}/${s}"
+  }
 }
 
 output "vpc_id" {
