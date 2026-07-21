@@ -220,6 +220,15 @@ kubectl delete -f k8s/ingress.yaml -f k8s/frontend-service.yaml \
 cd terraform
 terraform destroy
 ```
+<img width="997" height="182" alt="image" src="https://github.com/user-attachments/assets/08782d58-1d4f-4e3f-a0bf-c7ffddf8c5eb" />
+
+<img width="1897" height="565" alt="image" src="https://github.com/user-attachments/assets/de66a2d1-eaee-47e5-aeae-60f68edc236b" />
+
+<img width="1918" height="970" alt="image" src="https://github.com/user-attachments/assets/6e05cb37-e192-44a8-bbea-ff61318b6896" />
+
+<img width="1918" height="763" alt="image" src="https://github.com/user-attachments/assets/acb368ac-d657-4cb1-a713-3999cb0822ad" />
+
+<img width="1873" height="841" alt="image" src="https://github.com/user-attachments/assets/ec7fb76e-a357-4113-8505-7d4704505a7c" />
 
 > If `terraform destroy` fails on non-empty ECR repos, delete the images first:
 > `aws ecr batch-delete-image ...` or delete the repos from the console.
