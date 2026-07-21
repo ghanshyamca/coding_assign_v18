@@ -127,6 +127,7 @@ terraform workspace show
 
 <img width="1920" height="2077" alt="image" src="https://github.com/user-attachments/assets/67878b78-e77a-4a81-962f-898a00f14e3a" />
 
+<img width="1918" height="797" alt="image" src="https://github.com/user-attachments/assets/993367e9-9d9f-4798-8412-6f49aee6dae5" />
 
 After apply, wire up kubectl using the emitted output:
 
@@ -158,6 +159,8 @@ REGISTRY=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
 SHA=$(git rev-parse HEAD)          # the immutable tag for this commit
 echo "Building tag: $SHA"
 ```
+<img width="993" height="292" alt="image" src="https://github.com/user-attachments/assets/d01c66ee-328c-4cf2-85d6-07b4febf96f4" />
+
 
 **Step 2 — build once and push** (this happens exactly one time per commit):
 
@@ -171,6 +174,13 @@ docker build -t $REGISTRY/microsvc/orders:$SHA      services/orders
 docker push $REGISTRY/microsvc/api-gateway:$SHA
 docker push $REGISTRY/microsvc/orders:$SHA
 ```
+<img width="1918" height="862" alt="image" src="https://github.com/user-attachments/assets/0effdf29-9366-4a90-b1eb-3642e70a9a9c" />
+
+<img width="1918" height="485" alt="image" src="https://github.com/user-attachments/assets/7bd91ee8-c3f9-4f02-9d8c-e8073f936f17" />
+
+<img width="1240" height="432" alt="image" src="https://github.com/user-attachments/assets/b997d063-a7ea-4e5b-bf77-a7a3e89c54bd" />
+
+<img width="1919" height="744" alt="image" src="https://github.com/user-attachments/assets/970f0c7b-c644-492f-b44f-79a9111e95b8" />
 
 > The repos are `IMMUTABLE`: pushing the same tag twice is rejected, which
 > enforces the "never rebuilt" guarantee.
