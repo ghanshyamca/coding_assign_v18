@@ -209,6 +209,12 @@ Parameters: `AWS_REGION`, `CLUSTER_NAME`, `ECR_REPO`, `NAMESPACE`, `CHART_PATH`.
 Credentials: `aws-credentials` (kind: AWS Credentials) — see the header comment in the Jenkinsfile.
 
 ---
+<img width="1915" height="846" alt="image" src="https://github.com/user-attachments/assets/a7da0a95-52fc-4e1b-82ef-b79d4597e90d" />
+
+<img width="1522" height="820" alt="image" src="https://github.com/user-attachments/assets/417b93e2-0ab3-4223-91f3-b940ba7868b3" />
+
+<img width="1920" height="11716" alt="image" src="https://github.com/user-attachments/assets/118f79e7-ea9e-4b1e-9104-a372e29b34f6" />
+
 
 ## ROLLBACK STRATEGY
 
@@ -232,6 +238,7 @@ helm history app-router           # inspect revisions first
 kubectl patch svc bluegreen-node-active \
   -p '{"spec":{"selector":{"app.kubernetes.io/name":"bluegreen-node","track":"blue"}}}'
 ```
+<img width="1347" height="696" alt="image" src="https://github.com/user-attachments/assets/ac928e54-9abd-40b1-954f-523dcaa1922c" />
 
 Traffic returns to the still-running blue pods within seconds — no image pull,
 no scheduling delay.
@@ -243,6 +250,10 @@ crash-looping) and you want its prior version back:
 helm history app-green
 helm rollback app-green <GOOD_REVISION>
 ```
+<img width="1278" height="93" alt="image" src="https://github.com/user-attachments/assets/7be8c5bf-4f0c-4cbb-8311-0fc586b0c029" />
+
+<img width="883" height="62" alt="image" src="https://github.com/user-attachments/assets/68c7ed13-2e82-4edf-ab48-82444d59d9e0" />
+
 
 **C. Confirm.**
 
@@ -251,6 +262,7 @@ kubectl get svc bluegreen-node-active -o jsonpath='{.spec.selector.track}{"\n"}'
 kubectl run rb-check --rm -i --restart=Never --image=curlimages/curl:8.8.0 -- \
   curl -s http://bluegreen-node-active.default.svc.cluster.local/
 ```
+<img width="1042" height="141" alt="image" src="https://github.com/user-attachments/assets/da1f87f8-871e-458a-a59d-d05ee8ab0933" />
 
 Guideline: keep the previous color running until the new color has been verified
 in production for a bake period; only then scale it down or redeploy it as the
@@ -271,22 +283,15 @@ terraform destroy \
   -var="cluster_name=bluegreen-node-eks"
 ```
 
+<img width="1507" height="237" alt="image" src="https://github.com/user-attachments/assets/15c6049f-93f5-45ea-a745-aca01c9de92e" />
+
+<img width="1918" height="823" alt="image" src="https://github.com/user-attachments/assets/704d2377-bfb4-4b4a-b422-a61ce8f052d7" />
+
+<img width="1821" height="953" alt="image" src="https://github.com/user-attachments/assets/b3d11d23-20fa-4b9c-a040-a0533ae1c54f" />
+
+<img width="1919" height="1016" alt="image" src="https://github.com/user-attachments/assets/cc349216-ad5e-418c-a385-350bd8b4abbe" />
+
 If ECR still holds images, delete them first or Terraform will refuse to remove
 the repository.
 
 ---
-
-## Security practices applied
-
-- **Non-root everywhere**: container runs as the `node` user; pod/container
-  `securityContext` sets `runAsNonRoot`, drops all capabilities, disables
-  privilege escalation, uses a read-only root filesystem and `RuntimeDefault`
-  seccomp.
-- **Least-privilege image**: multi-stage build, `npm ci --omit=dev`, pinned
-  `node:20-alpine`, `HEALTHCHECK` on `/health`.
-- **Supply chain**: ECR `scan_on_push` enabled; images tagged by immutable git SHA.
-- **Resource governance**: CPU/memory requests and limits set on the deployment.
-- **ServiceAccount** token auto-mount disabled (app needs no API access).
-- **IRSA/OIDC** enabled on the cluster for fine-grained pod IAM when needed.
-- Lock down the EKS public endpoint to CI egress CIDRs and use a remote,
-  locked Terraform backend (`backend.tf.example`) in real environments.
