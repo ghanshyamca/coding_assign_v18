@@ -276,6 +276,13 @@ approve -> Deploy PROD**, with a `post{}` block for cleanup/notification.
 
 <img width="1920" height="1372" alt="image" src="https://github.com/user-attachments/assets/31abebab-6ea4-4172-b0e3-f77b456b6cc5" />
 
+<img width="1919" height="982" alt="image" src="https://github.com/user-attachments/assets/57937dc9-fc7d-456c-8491-f75ac55924e8" />
+
+<img width="1920" height="20460" alt="image" src="https://github.com/user-attachments/assets/41215220-911b-4284-8d6a-6fdd3ef4a286" />
+
+<img width="1918" height="587" alt="image" src="https://github.com/user-attachments/assets/b10cc975-dfb9-4369-969c-c548433a498c" />
+
+
 ---
 
 ## 7. Teardown (per workspace)
