@@ -117,7 +117,11 @@ terraform workspace show
 
 <img width="1920" height="2098" alt="image" src="https://github.com/user-attachments/assets/3d4c4945-fc10-43ac-8ef8-d2e2f1b1be60" />
 
+<img width="1877" height="906" alt="image" src="https://github.com/user-attachments/assets/2d6332dd-a555-402a-a9ac-4228605bfecd" />
 
+<img width="1918" height="978" alt="image" src="https://github.com/user-attachments/assets/9579719b-30dc-44f1-8633-3bdcb0718299" />
+
+<img width="1911" height="855" alt="image" src="https://github.com/user-attachments/assets/9b74b418-23e9-45c1-ba43-2c53c5378a8e" />
 
 
 After apply, wire up kubectl using the emitted output:
