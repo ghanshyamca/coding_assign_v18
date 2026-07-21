@@ -97,12 +97,21 @@ pipeline {
             aws ecr get-login-password --region "${AWS_REGION}" \
               | docker login --username AWS --password-stdin "${REGISTRY}"
 
-            # Build once, tag with the immutable git sha.
-            docker build -t "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}" task3-multienv-microservices/services/api-gateway
-            docker build -t "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"  task3-multienv-microservices/services/orders
-
-            docker push "${REGISTRY}/${GATEWAY_REPO}:${IMAGE_TAG}"
-            docker push "${REGISTRY}/${ORDERS_REPO}:${IMAGE_TAG}"
+            # Build once, tag with the immutable git sha. If this exact tag is
+            # already in ECR (e.g. a re-run of the same commit after a later
+            # stage failed), skip the push — the immutable repo would reject it
+            # and the artifact is by definition identical.
+            for SVC in "${GATEWAY_REPO}" "${ORDERS_REPO}"; do
+              if aws ecr describe-images --region "${AWS_REGION}" \
+                   --repository-name "${SVC}" \
+                   --image-ids imageTag="${IMAGE_TAG}" >/dev/null 2>&1; then
+                echo "SKIP: ${SVC}:${IMAGE_TAG} already in ECR (immutable) - not rebuilding/pushing."
+              else
+                CTX="task3-multienv-microservices/services/${SVC#${BASE_NAME}/}"
+                docker build -t "${REGISTRY}/${SVC}:${IMAGE_TAG}" "${CTX}"
+                docker push "${REGISTRY}/${SVC}:${IMAGE_TAG}"
+              fi
+            done
           '''
         }
       }
