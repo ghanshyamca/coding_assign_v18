@@ -87,6 +87,7 @@ terraform output configure_kubectl   # ready-to-run aws eks update-kubeconfig
 ```
 <img width="1072" height="286" alt="image" src="https://github.com/user-attachments/assets/7c9c3044-af58-48e4-8054-12233e5a4dd9" />
 
+<img width="1920" height="2098" alt="image" src="https://github.com/user-attachments/assets/ca27880a-4a39-47e6-91c0-1953ca1bb54d" />
 
 `modules/ecr` is invoked twice (`module.ecr_frontend`, `module.ecr_backend`) to
 create both repositories with identical policy (scan-on-push, keep last 10
@@ -126,6 +127,8 @@ docker push $REGISTRY/fullstack-frontend:$TAG
 
 <img width="1015" height="306" alt="image" src="https://github.com/user-attachments/assets/4583cd8f-2bd1-41f7-8971-a777da800f98" />
 
+<img width="1918" height="817" alt="image" src="https://github.com/user-attachments/assets/59b6233d-aee3-4916-903d-2f9538f9f710" />
+
 
 ## 4. Deploy to EKS
 
@@ -142,6 +145,7 @@ kubectl -n fullstack set image deployment/fullstack-frontend frontend=$REGISTRY/
 kubectl -n fullstack rollout status deployment/fullstack-backend
 kubectl -n fullstack rollout status deployment/fullstack-frontend
 ```
+<img width="1237" height="592" alt="image" src="https://github.com/user-attachments/assets/de649727-62bf-4449-b195-29d9f963797a" />
 
 The manifests ship with `REGISTRY/…:TAG` placeholders so `kubectl apply`
 followed by `set image` (exactly what the pipeline does) is the intended flow.
@@ -164,6 +168,17 @@ followed by `set image` (exactly what the pipeline does) is the intended flow.
 `environment {}` centralises region, cluster name, and both ECR repo names.
 Credentials used: `aws-credentials` (access key/secret) and `aws-account-id`.
 Plugins: Docker Pipeline, Kubernetes CLI / kubectl on the agent, AWS CLI v2.
+
+<img width="1920" height="1372" alt="image" src="https://github.com/user-attachments/assets/cc7fd9dc-5e07-4a0f-a80a-2fa2f5ca3540" />
+
+<img width="1920" height="3682" alt="image" src="https://github.com/user-attachments/assets/5e89d301-63f8-451c-b959-f3df3acd3606" />
+
+<img width="1901" height="956" alt="image" src="https://github.com/user-attachments/assets/9e38344e-2153-486d-99f9-d50bf49b5101" />
+
+<img width="1920" height="26772" alt="image" src="https://github.com/user-attachments/assets/8f3c7ae2-0dea-4539-a79c-f53f51888f51" />
+
+<img width="1918" height="852" alt="image" src="https://github.com/user-attachments/assets/8bdce835-9323-42a0-a1e7-b723c7fb69d4" />
+
 
 ## How the frontend reaches the backend
 
