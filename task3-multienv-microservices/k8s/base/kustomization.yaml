@@ -9,5 +9,10 @@ resources:
   - orders/deployment.yaml
   - orders/service.yaml
 
-commonLabels:
-  part-of: microsvc
+# Modern replacement for the deprecated commonLabels field.
+# includeSelectors keeps the old behavior (label lands on selectors too) so
+# already-deployed workloads' immutable selectors stay unchanged.
+labels:
+  - includeSelectors: true
+    pairs:
+      part-of: microsvc
